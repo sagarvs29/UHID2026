@@ -1,0 +1,41 @@
+# ─── Dependencies ─────────────────────────────────────────────
+node_modules/
+.npm
+
+# ─── Build outputs ────────────────────────────────────────────
+dist/
+build/
+*.js.map
+
+# ─── Environment (NEVER COMMIT) ───────────────────────────────
+.env
+.env.local
+.env.production
+apps/api/.env
+apps/web/.env
+apps/ai/.env
+
+# ─── Python ───────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+apps/ai/venv/
+apps/ai/.venv/
+
+# ─── Prisma ───────────────────────────────────────────────────
+apps/api/prisma/migrations/
+
+# ─── OS ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── IDE ──────────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+
+# ─── Logs ─────────────────────────────────────────────────────
+*.log
+logs/

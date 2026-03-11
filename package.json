@@ -1,0 +1,21 @@
+{
+  "name": "uhid2026",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/web",
+    "apps/ai"
+  ],
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail false \"npm run dev --workspace=apps/api\" \"npm run dev --workspace=apps/web\" \"cd apps/ai && uvicorn main:app --reload --port 8000\"",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:ai": "cd apps/ai && uvicorn main:app --reload --port 8000",
+    "build": "npm run build --workspace=apps/api && npm run build --workspace=apps/web",
+    "test": "npm run test --workspace=apps/api && npm run test --workspace=apps/web"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
