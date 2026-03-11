@@ -1,41 +1,89 @@
+/**
+ * auth.service.ts
+ * All Phase 1 authentication business logic.
+ *
+ * Key rules:
+ * - NO demo data / NO pre-fills — every field is real
+ * - User model: id, email, passwordHash, role, isEmailVerified, emailVerifyToken, isActive
+ * - Role profiles are SEPARATE models (Patient, Doctor, HospitalStaff, InsuranceProvider, SuperAdmin)
+ * - UHID lives on Patient model, NOT on User
+ * - Doctor/Staff → isVerified=false until Hospital Admin approves
+ * - InsuranceProvider → isVerified=false until Super Admin approves
+ */
 import argon2 from 'argon2';
+import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import prisma from '@/lib/prisma';
 import { redis, TTL } from '@/lib/redis';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '@/lib/jwt';
-import { generateOtp, generateUHID } from '@/lib/crypto';
-import { sendOtpEmail, sendWelcomeEmail, sendPasswordResetEmail } from '@/lib/email';
-import { sendOtpSms } from '@/lib/sms';
-import { RegisterInput, LoginInput } from '@/validators/auth.validator';
+import { generateUHID, encrypt } from '@/lib/crypto';
+import {
+  sendEmailVerificationEmail,
+  sendWelcomePatientEmail,
+  sendPasswordResetEmail,
+  sendApprovalPendingEmail,
+} from '@/lib/email';
 import logger from '@/lib/logger';
-import { Role } from '@prisma/client';
+import { Role, BloodGroup, Gender, StaffType } from '@prisma/client';
+import type {
+  LoginInput,
+  PatientRegisterInput,
+  DoctorRegisterInput,
+  StaffRegisterInput,
+  InsuranceRegisterInput,
+} from '@/validators/auth.validator';
 
-// ─── Types ────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// INTERNAL TYPES
+// ─────────────────────────────────────────────────────────────────────────────
 interface TokenPair {
   accessToken: string;
   refreshToken: string;
 }
 
-interface LoginResult {
+interface BaseAuthResult {
   user: {
     id: string;
-    name: string;
     email: string;
     role: Role;
-    uhid?: string | null;
     isEmailVerified: boolean;
-    isPhoneVerified: boolean;
+    isActive: boolean;
   };
   tokens: TokenPair;
+  profile: Record<string, unknown>;
+  requiresApproval?: boolean;
+  requiresEmailVerification: boolean;
 }
 
-// ─── Helpers ──────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// ARGON2 CONFIG — memory-hard, secure
+// ─────────────────────────────────────────────────────────────────────────────
+const ARGON2_OPTIONS = {
+  type: argon2.argon2id,
+  memoryCost: 65536, // 64 MB
+  timeCost: 3,
+  parallelism: 1,
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INTERNAL HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Hash a password with Argon2id.
+ */
+async function hashPassword(password: string): Promise<string> {
+  return argon2.hash(password, ARGON2_OPTIONS);
+}
+
+/**
+ * Issue access + refresh token pair and store refresh token in Redis.
+ */
 async function createTokenPair(userId: string, role: string): Promise<TokenPair> {
   const sessionId = uuidv4();
   const accessToken = signAccessToken({ userId, role, sessionId });
   const refreshToken = signRefreshToken({ userId, sessionId });
 
-  // Store refresh token in Redis
   await redis.setex(
     `refresh:${userId}:${sessionId}`,
     TTL.REFRESH_TOKEN,
@@ -45,151 +93,534 @@ async function createTokenPair(userId: string, role: string): Promise<TokenPair>
   return { accessToken, refreshToken };
 }
 
-// ─── Auth Service ─────────────────────────────────────────
-export async function registerUser(data: RegisterInput): Promise<LoginResult> {
-  // Check email uniqueness
-  const existing = await prisma.user.findUnique({
-    where: { email: data.email },
-  });
-  if (existing) {
-    const err = new Error('Email already registered') as Error & { statusCode: number };
-    err.statusCode = 409;
-    throw err;
+/**
+ * Generate a cryptographically secure email verification token (hex string).
+ */
+function generateEmailToken(): string {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+/**
+ * Throw a typed HTTP error.
+ */
+function httpError(message: string, statusCode: number): never {
+  const err = new Error(message) as Error & { statusCode: number };
+  err.statusCode = statusCode;
+  throw err;
+}
+
+/**
+ * Collision-safe UHID generation — retries up to 10 times.
+ */
+async function generateCollisionFreeUHID(): Promise<string> {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const uhid = generateUHID();
+    const exists = await prisma.patient.findUnique({ where: { uhid } });
+    if (!exists) return uhid;
   }
+  httpError('Could not generate unique UHID. Please try again.', 500);
+}
 
-  // Check phone uniqueness
-  const existingPhone = await prisma.user.findFirst({
-    where: { phone: data.phone },
+// ─────────────────────────────────────────────────────────────────────────────
+// PATIENT REGISTRATION
+// ─────────────────────────────────────────────────────────────────────────────
+export async function registerPatient(data: PatientRegisterInput): Promise<BaseAuthResult> {
+  // 1. Unique email check
+  const existing = await prisma.user.findUnique({ where: { email: data.email } });
+  if (existing) httpError('This email is already registered', 409);
+
+  // 2. Hash password
+  const passwordHash = await hashPassword(data.password);
+
+  // 3. Email verify token
+  const emailVerifyToken = generateEmailToken();
+
+  // 4. Generate collision-safe UHID
+  const uhid = await generateCollisionFreeUHID();
+
+  // 5. Create User + Patient in a transaction
+  const { user, patient } = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        email: data.email,
+        passwordHash,
+        role: Role.PATIENT,
+        isEmailVerified: false,
+        emailVerifyToken,
+        isActive: true,
+      },
+    });
+
+    const patient = await tx.patient.create({
+      data: {
+        userId: user.id,
+        uhid,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        dateOfBirth: new Date(data.dateOfBirth),
+        gender: data.gender as Gender,
+        bloodGroup: (data.bloodGroup as BloodGroup) ?? BloodGroup.UNKNOWN,
+        phone: data.phone || null,
+        allergies: data.allergies ?? [],
+        chronicConditions: data.chronicConditions ?? [],
+      },
+    });
+
+    return { user, patient };
   });
-  if (existingPhone) {
-    const err = new Error('Phone number already registered') as Error & { statusCode: number };
-    err.statusCode = 409;
-    throw err;
-  }
 
-  const passwordHash = await argon2.hash(data.password, {
-    type: argon2.argon2id,
-    memoryCost: 65536,
-    timeCost: 3,
-    parallelism: 1,
-  });
-
-  const uhid = data.role === 'PATIENT' ? generateUHID() : null;
-
-  const user = await prisma.user.create({
-    data: {
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      passwordHash,
-      role: data.role as Role,
-      uhid,
-    },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      phone: true,
-      role: true,
-      uhid: true,
-      isEmailVerified: true,
-      isPhoneVerified: true,
-    },
-  });
-
-  // Send welcome email (don't await — non-blocking)
-  sendWelcomeEmail(user.email, user.name, user.uhid ?? user.id).catch((e) =>
-    logger.warn('[Auth] Welcome email failed:', e)
+  // 6. Send verification email (non-blocking)
+  sendEmailVerificationEmail(user.email, `${patient.firstName} ${patient.lastName}`, emailVerifyToken).catch(
+    (e) => logger.warn('[Auth] Email verification send failed:', e)
   );
 
+  // 7. Issue tokens
   const tokens = await createTokenPair(user.id, user.role);
 
-  logger.info(`[Auth] New user registered: ${user.id} (${user.role})`);
+  logger.info(`[Auth] Patient registered: ${user.id} | UHID: ${uhid}`);
 
   return {
     user: {
       id: user.id,
-      name: user.name,
       email: user.email,
       role: user.role,
-      uhid: user.uhid,
-      isEmailVerified: user.isEmailVerified,
-      isPhoneVerified: user.isPhoneVerified,
+      isEmailVerified: false,
+      isActive: true,
     },
     tokens,
+    profile: {
+      uhid: patient.uhid,
+      firstName: patient.firstName,
+      lastName: patient.lastName,
+      dateOfBirth: patient.dateOfBirth,
+      gender: patient.gender,
+      bloodGroup: patient.bloodGroup,
+      phone: patient.phone,
+      allergies: patient.allergies,
+      chronicConditions: patient.chronicConditions,
+    },
+    requiresEmailVerification: true,
   };
 }
 
-export async function loginUser(data: LoginInput): Promise<LoginResult> {
+// ─────────────────────────────────────────────────────────────────────────────
+// DOCTOR REGISTRATION
+// ─────────────────────────────────────────────────────────────────────────────
+export async function registerDoctor(data: DoctorRegisterInput): Promise<BaseAuthResult> {
+  // 1. Unique email
+  const existing = await prisma.user.findUnique({ where: { email: data.email } });
+  if (existing) httpError('This email is already registered', 409);
+
+  // 2. Unique license number
+  const existingLicense = await prisma.doctor.findUnique({
+    where: { licenseNumber: data.licenseNumber },
+  });
+  if (existingLicense) httpError('This license number is already registered', 409);
+
+  // 3. Verify hospital exists and is active
+  const hospital = await prisma.hospital.findUnique({ where: { id: data.hospitalId } });
+  if (!hospital) httpError('Hospital not found', 404);
+  if (!hospital.isVerified) httpError('Selected hospital is not yet verified on UHID', 400);
+
+  // 4. Hash + token
+  const passwordHash = await hashPassword(data.password);
+  const emailVerifyToken = generateEmailToken();
+
+  // 5. Transaction: User + Doctor
+  const { user, doctor } = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        email: data.email,
+        passwordHash,
+        role: Role.DOCTOR,
+        isEmailVerified: false,
+        emailVerifyToken,
+        isActive: true,
+      },
+    });
+
+    const doctor = await tx.doctor.create({
+      data: {
+        userId: user.id,
+        hospitalId: data.hospitalId,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        specialty: data.specialty,
+        licenseNumber: data.licenseNumber,
+        qualifications: data.qualifications,
+        experienceYears: data.experienceYears,
+        consultationFee: data.consultationFee ?? 0,
+        availableForVideo: data.availableForVideo ?? true,
+        availableForInPerson: data.availableForInPerson ?? true,
+        languages: data.languages ?? ['English'],
+        isVerified: false, // requires Hospital Admin approval
+      },
+    });
+
+    return { user, doctor };
+  });
+
+  // 6. Emails (non-blocking)
+  sendEmailVerificationEmail(user.email, `Dr. ${doctor.firstName} ${doctor.lastName}`, emailVerifyToken).catch(
+    (e) => logger.warn('[Auth] Doctor verification email failed:', e)
+  );
+  sendApprovalPendingEmail(
+    user.email,
+    `Dr. ${doctor.firstName} ${doctor.lastName}`,
+    'DOCTOR',
+    hospital.name
+  ).catch((e) => logger.warn('[Auth] Approval pending email failed:', e));
+
+  const tokens = await createTokenPair(user.id, user.role);
+
+  logger.info(`[Auth] Doctor registered (pending approval): ${user.id} | Hospital: ${hospital.name}`);
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      isEmailVerified: false,
+      isActive: true,
+    },
+    tokens,
+    profile: {
+      firstName: doctor.firstName,
+      lastName: doctor.lastName,
+      specialty: doctor.specialty,
+      licenseNumber: doctor.licenseNumber,
+      hospitalId: doctor.hospitalId,
+      hospitalName: hospital.name,
+      isVerified: false,
+    },
+    requiresApproval: true,
+    requiresEmailVerification: true,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HOSPITAL STAFF REGISTRATION
+// ─────────────────────────────────────────────────────────────────────────────
+export async function registerStaff(data: StaffRegisterInput): Promise<BaseAuthResult> {
+  const existing = await prisma.user.findUnique({ where: { email: data.email } });
+  if (existing) httpError('This email is already registered', 409);
+
+  const hospital = await prisma.hospital.findUnique({ where: { id: data.hospitalId } });
+  if (!hospital) httpError('Hospital not found', 404);
+  if (!hospital.isVerified) httpError('Selected hospital is not yet verified on UHID', 400);
+
+  const passwordHash = await hashPassword(data.password);
+  const emailVerifyToken = generateEmailToken();
+
+  const { user, staff } = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        email: data.email,
+        passwordHash,
+        role: Role.HOSPITAL_STAFF,
+        isEmailVerified: false,
+        emailVerifyToken,
+        isActive: true,
+      },
+    });
+
+    const staff = await tx.hospitalStaff.create({
+      data: {
+        userId: user.id,
+        hospitalId: data.hospitalId,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        staffType: data.staffType as StaffType,
+        employeeId: data.employeeId || null,
+        isVerified: false, // requires Hospital Admin approval
+      },
+    });
+
+    return { user, staff };
+  });
+
+  sendEmailVerificationEmail(user.email, `${staff.firstName} ${staff.lastName}`, emailVerifyToken).catch(
+    (e) => logger.warn('[Auth] Staff verification email failed:', e)
+  );
+  sendApprovalPendingEmail(
+    user.email,
+    `${staff.firstName} ${staff.lastName}`,
+    'HOSPITAL_STAFF',
+    hospital.name
+  ).catch((e) => logger.warn('[Auth] Staff approval email failed:', e));
+
+  const tokens = await createTokenPair(user.id, user.role);
+
+  logger.info(`[Auth] Staff registered (pending approval): ${user.id} | ${data.staffType} at ${hospital.name}`);
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      isEmailVerified: false,
+      isActive: true,
+    },
+    tokens,
+    profile: {
+      firstName: staff.firstName,
+      lastName: staff.lastName,
+      staffType: staff.staffType,
+      employeeId: staff.employeeId,
+      hospitalId: staff.hospitalId,
+      hospitalName: hospital.name,
+      isVerified: false,
+    },
+    requiresApproval: true,
+    requiresEmailVerification: true,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INSURANCE PROVIDER REGISTRATION
+// ─────────────────────────────────────────────────────────────────────────────
+export async function registerInsuranceProvider(data: InsuranceRegisterInput): Promise<BaseAuthResult> {
+  const existing = await prisma.user.findUnique({ where: { email: data.email } });
+  if (existing) httpError('This email is already registered', 409);
+
+  const existingLicense = await prisma.insuranceProvider.findUnique({
+    where: { licenseNumber: data.licenseNumber },
+  });
+  if (existingLicense) httpError('This IRDAI license number is already registered', 409);
+
+  const passwordHash = await hashPassword(data.password);
+  const emailVerifyToken = generateEmailToken();
+
+  const { user, provider } = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        email: data.email,
+        passwordHash,
+        role: Role.INSURANCE_PROVIDER,
+        isEmailVerified: false,
+        emailVerifyToken,
+        isActive: true,
+      },
+    });
+
+    const provider = await tx.insuranceProvider.create({
+      data: {
+        userId: user.id,
+        companyName: data.companyName,
+        licenseNumber: data.licenseNumber,
+        isVerified: false, // requires Super Admin approval
+      },
+    });
+
+    return { user, provider };
+  });
+
+  sendEmailVerificationEmail(user.email, provider.companyName, emailVerifyToken).catch(
+    (e) => logger.warn('[Auth] Insurance verification email failed:', e)
+  );
+  sendApprovalPendingEmail(
+    user.email,
+    provider.companyName,
+    'INSURANCE_PROVIDER',
+    'UHID Super Admin'
+  ).catch((e) => logger.warn('[Auth] Insurance approval email failed:', e));
+
+  const tokens = await createTokenPair(user.id, user.role);
+
+  logger.info(`[Auth] Insurance provider registered (pending approval): ${user.id} | ${data.companyName}`);
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      isEmailVerified: false,
+      isActive: true,
+    },
+    tokens,
+    profile: {
+      companyName: provider.companyName,
+      licenseNumber: provider.licenseNumber,
+      isVerified: false,
+    },
+    requiresApproval: true,
+    requiresEmailVerification: true,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOGIN  (same endpoint for all roles)
+// ─────────────────────────────────────────────────────────────────────────────
+export async function loginUser(data: LoginInput): Promise<BaseAuthResult> {
+  // 1. Find user — use generic error to not reveal email existence
   const user = await prisma.user.findUnique({
     where: { email: data.email },
     select: {
       id: true,
-      name: true,
       email: true,
-      phone: true,
-      role: true,
-      uhid: true,
       passwordHash: true,
+      role: true,
       isEmailVerified: true,
-      isPhoneVerified: true,
       isActive: true,
     },
   });
 
-  if (!user) {
-    const err = new Error('Invalid email or password') as Error & { statusCode: number };
-    err.statusCode = 401;
-    throw err;
+  if (!user) httpError('Invalid email or password', 401);
+
+  // 2. Verify password — use constant-time verify
+  const passwordValid = await argon2.verify(user.passwordHash, data.password);
+  if (!passwordValid) {
+    // Log failed attempt (non-blocking)
+    logger.warn(`[Auth] Failed login attempt for: ${data.email}`);
+    httpError('Invalid email or password', 401);
   }
 
+  // 3. Account active check
   if (!user.isActive) {
-    const err = new Error('Account suspended. Please contact support.') as Error & { statusCode: number };
-    err.statusCode = 403;
-    throw err;
+    httpError('Your account has been suspended. Please contact support.', 403);
   }
 
-  const valid = await argon2.verify(user.passwordHash, data.password);
-  if (!valid) {
-    const err = new Error('Invalid email or password') as Error & { statusCode: number };
-    err.statusCode = 401;
-    throw err;
+  // 4. Role-specific verification checks
+  let profile: Record<string, unknown> = {};
+  let requiresApproval = false;
+
+  if (user.role === Role.DOCTOR) {
+    const doctor = await prisma.doctor.findUnique({
+      where: { userId: user.id },
+      include: { hospital: { select: { name: true } } },
+    });
+    if (!doctor) httpError('Doctor profile not found. Please contact support.', 500);
+    if (!doctor.isVerified) {
+      requiresApproval = true; // Frontend shows "Pending Approval" screen
+    }
+    profile = {
+      firstName: doctor.firstName,
+      lastName: doctor.lastName,
+      specialty: doctor.specialty,
+      licenseNumber: doctor.licenseNumber,
+      hospitalId: doctor.hospitalId,
+      hospitalName: doctor.hospital.name,
+      isVerified: doctor.isVerified,
+      rating: doctor.rating,
+      photoUrl: doctor.photoUrl,
+    };
+  } else if (user.role === Role.HOSPITAL_STAFF) {
+    const staff = await prisma.hospitalStaff.findUnique({
+      where: { userId: user.id },
+      include: { hospital: { select: { name: true } } },
+    });
+    if (!staff) httpError('Staff profile not found. Please contact support.', 500);
+    if (!staff.isVerified) {
+      requiresApproval = true;
+    }
+    profile = {
+      firstName: staff.firstName,
+      lastName: staff.lastName,
+      staffType: staff.staffType,
+      employeeId: staff.employeeId,
+      hospitalId: staff.hospitalId,
+      hospitalName: staff.hospital.name,
+      isVerified: staff.isVerified,
+    };
+  } else if (user.role === Role.PATIENT) {
+    const patient = await prisma.patient.findUnique({
+      where: { userId: user.id },
+    });
+    if (!patient) httpError('Patient profile not found. Please contact support.', 500);
+    profile = {
+      uhid: patient.uhid,
+      firstName: patient.firstName,
+      lastName: patient.lastName,
+      dateOfBirth: patient.dateOfBirth,
+      gender: patient.gender,
+      bloodGroup: patient.bloodGroup,
+      phone: patient.phone,
+      photoUrl: patient.photoUrl,
+    };
+  } else if (user.role === Role.HOSPITAL_ADMIN) {
+    const admin = await prisma.hospitalAdmin.findUnique({
+      where: { userId: user.id },
+      include: { hospital: { select: { id: true, name: true } } },
+    });
+    if (!admin) httpError('Admin profile not found. Please contact support.', 500);
+    profile = {
+      firstName: admin.firstName,
+      lastName: admin.lastName,
+      hospitalId: admin.hospitalId,
+      hospitalName: admin.hospital.name,
+    };
+  } else if (user.role === Role.INSURANCE_PROVIDER) {
+    const provider = await prisma.insuranceProvider.findUnique({
+      where: { userId: user.id },
+    });
+    if (!provider) httpError('Insurance provider profile not found.', 500);
+    if (!provider.isVerified) {
+      requiresApproval = true;
+    }
+    profile = {
+      companyName: provider.companyName,
+      licenseNumber: provider.licenseNumber,
+      isVerified: provider.isVerified,
+    };
+  } else if (user.role === Role.SUPER_ADMIN) {
+    const superAdmin = await prisma.superAdmin.findUnique({
+      where: { userId: user.id },
+    });
+    if (!superAdmin) httpError('Super admin profile not found.', 500);
+    profile = {
+      firstName: superAdmin.firstName,
+      lastName: superAdmin.lastName,
+    };
   }
 
+  // 5. Write audit log (non-blocking)
+  prisma.auditLog.create({
+    data: {
+      actorId: user.id,
+      actorRole: user.role,
+      action: 'LOGIN',
+      severity: 'LOW',
+      ipAddress: null,
+      userAgent: null,
+      metadata: { role: user.role },
+    },
+  }).catch((e) => logger.warn('[Auth] AuditLog write failed:', e));
+
+  // 6. Issue tokens
   const tokens = await createTokenPair(user.id, user.role);
 
-  logger.info(`[Auth] User logged in: ${user.id} (${user.role})`);
+  logger.info(`[Auth] Login success: ${user.id} (${user.role})`);
 
   return {
     user: {
       id: user.id,
-      name: user.name,
       email: user.email,
       role: user.role,
-      uhid: user.uhid,
       isEmailVerified: user.isEmailVerified,
-      isPhoneVerified: user.isPhoneVerified,
+      isActive: user.isActive,
     },
     tokens,
+    profile,
+    requiresApproval,
+    requiresEmailVerification: !user.isEmailVerified,
   };
 }
 
-export async function refreshTokens(refreshToken: string): Promise<TokenPair> {
+// ─────────────────────────────────────────────────────────────────────────────
+// REFRESH TOKENS
+// ─────────────────────────────────────────────────────────────────────────────
+export async function refreshTokens(rawRefreshToken: string): Promise<TokenPair> {
   let payload: { userId: string; sessionId: string };
 
   try {
-    payload = verifyRefreshToken(refreshToken);
+    payload = verifyRefreshToken(rawRefreshToken);
   } catch {
-    const err = new Error('Invalid refresh token') as Error & { statusCode: number };
-    err.statusCode = 401;
-    throw err;
+    httpError('Invalid or expired refresh token', 401);
   }
 
   const stored = await redis.get(`refresh:${payload.userId}:${payload.sessionId}`);
-  if (!stored || stored !== refreshToken) {
-    const err = new Error('Refresh token expired or revoked') as Error & { statusCode: number };
-    err.statusCode = 401;
-    throw err;
+  if (!stored || stored !== rawRefreshToken) {
+    httpError('Refresh token revoked or expired. Please log in again.', 401);
   }
 
   const user = await prisma.user.findUnique({
@@ -198,118 +629,191 @@ export async function refreshTokens(refreshToken: string): Promise<TokenPair> {
   });
 
   if (!user || !user.isActive) {
-    const err = new Error('User not found or suspended') as Error & { statusCode: number };
-    err.statusCode = 401;
-    throw err;
+    httpError('Account not found or suspended', 401);
   }
 
-  // Rotate: delete old, issue new
+  // Rotate: delete old, issue new (prevents replay)
   await redis.del(`refresh:${payload.userId}:${payload.sessionId}`);
+
+  logger.info(`[Auth] Token refreshed: ${payload.userId}`);
+
   return createTokenPair(user.id, user.role);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// LOGOUT
+// ─────────────────────────────────────────────────────────────────────────────
 export async function logout(
   userId: string,
   sessionId: string,
-  accessToken: string
+  accessToken: string,
+  role?: Role
 ): Promise<void> {
-  // Remove refresh token
+  // Delete refresh token from Redis
   await redis.del(`refresh:${userId}:${sessionId}`);
-  // Blacklist access token for remaining TTL
+
+  // Blacklist the access token for its remaining TTL (prevents reuse)
   await redis.setex(`blacklist:${accessToken}`, TTL.BLACKLIST, '1');
-  logger.info(`[Auth] User logged out: ${userId}`);
-}
 
-export async function sendOtp(
-  identifier: string,
-  type: 'email' | 'phone',
-  purpose: string
-): Promise<void> {
-  const otp = generateOtp(6);
-  const key = `otp:${purpose}:${identifier}`;
-
-  await redis.setex(key, TTL.OTP, otp);
-
-  if (type === 'email') {
-    const user = await prisma.user.findUnique({
-      where: { email: identifier },
-      select: { name: true },
-    });
-    await sendOtpEmail(identifier, otp, user?.name ?? 'User');
-  } else {
-    await sendOtpSms(identifier, otp);
+  // Audit log (non-blocking) — role comes from JWT payload via controller
+  if (role) {
+    prisma.auditLog.create({
+      data: {
+        actorId: userId,
+        actorRole: role,
+        action: 'LOGOUT',
+        severity: 'LOW',
+        metadata: {},
+      },
+    }).catch((_e: unknown) => logger.warn('[Auth] AuditLog write failed on logout'));
   }
 
-  logger.info(`[Auth] OTP sent for ${purpose} to ${type}`);
+  logger.info(`[Auth] Logout: ${userId}`);
 }
 
-export async function verifyOtp(
-  identifier: string,
-  otp: string,
-  purpose: string
-): Promise<boolean> {
-  const key = `otp:${purpose}:${identifier}`;
-  const stored = await redis.get(key);
+// ─────────────────────────────────────────────────────────────────────────────
+// EMAIL VERIFICATION
+// ─────────────────────────────────────────────────────────────────────────────
+export async function verifyEmail(token: string): Promise<void> {
+  const user = await prisma.user.findFirst({
+    where: { emailVerifyToken: token },
+  });
 
-  if (!stored || stored !== otp) return false;
-
-  // Consume OTP
-  await redis.del(key);
-
-  // Mark verified in DB if applicable
-  if (purpose === 'VERIFY_EMAIL') {
-    await prisma.user.updateMany({
-      where: { email: identifier },
-      data: { isEmailVerified: true },
-    });
-  } else if (purpose === 'VERIFY_PHONE') {
-    await prisma.user.updateMany({
-      where: { phone: identifier },
-      data: { isPhoneVerified: true },
-    });
+  if (!user) {
+    httpError('Invalid or expired verification token', 400);
   }
 
-  return true;
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      isEmailVerified: true,
+      emailVerifyToken: null, // consume token
+    },
+  });
+
+  // Audit log
+  prisma.auditLog.create({
+    data: {
+      actorId: user.id,
+      actorRole: user.role,
+      action: 'EMAIL_VERIFIED',
+      severity: 'LOW',
+      metadata: {},
+    },
+  }).catch((_e: unknown) => logger.warn('[Auth] AuditLog write failed on email verify'));
+
+  // Send welcome email for patients
+  if (user.role === Role.PATIENT) {
+    const patient = await prisma.patient.findUnique({ where: { userId: user.id } });
+    if (patient) {
+      sendWelcomePatientEmail(
+        user.email,
+        `${patient.firstName} ${patient.lastName}`,
+        patient.uhid
+      ).catch((e) => logger.warn('[Auth] Welcome email failed:', e));
+    }
+  }
+
+  logger.info(`[Auth] Email verified: ${user.id}`);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FORGOT PASSWORD
+// ─────────────────────────────────────────────────────────────────────────────
 export async function forgotPassword(email: string): Promise<void> {
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) return; // Silent — don't reveal if email exists
 
-  const resetToken = uuidv4();
-  await redis.setex(`reset:${resetToken}`, 3600, user.id); // 1 hour
-  await sendPasswordResetEmail(email, user.name, resetToken);
+  // Always return success — do NOT reveal if email is registered
+  if (!user) return;
+
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  await redis.setex(`reset:${resetToken}`, 3600, user.id); // 1 hour TTL
+
+  // Get display name per role
+  let displayName = 'User';
+  try {
+    if (user.role === Role.PATIENT) {
+      const p = await prisma.patient.findUnique({ where: { userId: user.id } });
+      if (p) displayName = `${p.firstName} ${p.lastName}`;
+    } else if (user.role === Role.DOCTOR) {
+      const d = await prisma.doctor.findUnique({ where: { userId: user.id } });
+      if (d) displayName = `Dr. ${d.firstName} ${d.lastName}`;
+    } else if (user.role === Role.HOSPITAL_STAFF) {
+      const s = await prisma.hospitalStaff.findUnique({ where: { userId: user.id } });
+      if (s) displayName = `${s.firstName} ${s.lastName}`;
+    } else if (user.role === Role.HOSPITAL_ADMIN) {
+      const a = await prisma.hospitalAdmin.findUnique({ where: { userId: user.id } });
+      if (a) displayName = `${a.firstName} ${a.lastName}`;
+    } else if (user.role === Role.INSURANCE_PROVIDER) {
+      const ip = await prisma.insuranceProvider.findUnique({ where: { userId: user.id } });
+      if (ip) displayName = ip.companyName;
+    } else if (user.role === Role.SUPER_ADMIN) {
+      const sa = await prisma.superAdmin.findUnique({ where: { userId: user.id } });
+      if (sa) displayName = `${sa.firstName} ${sa.lastName}`;
+    }
+  } catch (e) {
+    logger.warn('[Auth] Could not fetch display name for password reset email:', e);
+  }
+
+  await sendPasswordResetEmail(email, displayName, resetToken);
+
+  // Audit log
+  prisma.auditLog.create({
+    data: {
+      actorId: user.id,
+      actorRole: user.role,
+      action: 'PASSWORD_RESET',
+      severity: 'MEDIUM',
+      metadata: { step: 'reset_requested' },
+    },
+  }).catch((_e: unknown) => logger.warn('[Auth] AuditLog write failed on forgot-password'));
 
   logger.info(`[Auth] Password reset link sent: ${user.id}`);
 }
 
-export async function resetPassword(
-  token: string,
-  newPassword: string
-): Promise<void> {
+// ─────────────────────────────────────────────────────────────────────────────
+// RESET PASSWORD
+// ─────────────────────────────────────────────────────────────────────────────
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
   const userId = await redis.get(`reset:${token}`);
   if (!userId) {
-    const err = new Error('Invalid or expired reset token') as Error & { statusCode: number };
-    err.statusCode = 400;
-    throw err;
+    httpError('Invalid or expired reset token. Please request a new one.', 400);
   }
 
-  const passwordHash = await argon2.hash(newPassword, {
-    type: argon2.argon2id,
-    memoryCost: 65536,
-    timeCost: 3,
-    parallelism: 1,
-  });
+  const passwordHash = await hashPassword(newPassword);
 
-  await prisma.user.update({
+  const updatedUser = await prisma.user.update({
     where: { id: userId },
     data: { passwordHash },
+    select: { role: true },
   });
 
+  // Delete reset token
   await redis.del(`reset:${token}`);
-  logger.info(`[Auth] Password reset successful: ${userId}`);
+
+  // Delete ALL refresh tokens for this user (security: logout all devices on password reset)
+  const keys = await redis.keys(`refresh:${userId}:*`);
+  if (keys.length > 0) {
+    await redis.del(...keys);
+  }
+
+  // Audit log
+  prisma.auditLog.create({
+    data: {
+      actorId: userId,
+      actorRole: updatedUser.role,
+      action: 'PASSWORD_RESET',
+      severity: 'HIGH',
+      metadata: { step: 'reset_completed' },
+    },
+  }).catch((_e: unknown) => logger.warn('[Auth] AuditLog write failed on reset-password'));
+
+  logger.info(`[Auth] Password reset completed: ${userId}`);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CHANGE PASSWORD  (authenticated user)
+// ─────────────────────────────────────────────────────────────────────────────
 export async function changePassword(
   userId: string,
   currentPassword: string,
@@ -322,18 +826,132 @@ export async function changePassword(
 
   const valid = await argon2.verify(user.passwordHash, currentPassword);
   if (!valid) {
-    const err = new Error('Current password is incorrect') as Error & { statusCode: number };
-    err.statusCode = 400;
-    throw err;
+    httpError('Current password is incorrect', 400);
   }
 
-  const passwordHash = await argon2.hash(newPassword, {
-    type: argon2.argon2id,
-    memoryCost: 65536,
-    timeCost: 3,
-    parallelism: 1,
+  const passwordHash = await hashPassword(newPassword);
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash },
   });
 
-  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
   logger.info(`[Auth] Password changed: ${userId}`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET ME  (return full profile for the authenticated user)
+// ─────────────────────────────────────────────────────────────────────────────
+export async function getMe(userId: string): Promise<{
+  user: Record<string, unknown>;
+  profile: Record<string, unknown> | null;
+}> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      isEmailVerified: true,
+      isActive: true,
+      createdAt: true,
+    },
+  });
+
+  if (!user) httpError('User not found', 404);
+
+  let profile: Record<string, unknown> | null = null;
+
+  if (user.role === Role.PATIENT) {
+    const p = await prisma.patient.findUnique({ where: { userId } });
+    if (p) {
+      profile = {
+        uhid: p.uhid,
+        firstName: p.firstName,
+        lastName: p.lastName,
+        dateOfBirth: p.dateOfBirth,
+        gender: p.gender,
+        bloodGroup: p.bloodGroup,
+        phone: p.phone,
+        photoUrl: p.photoUrl,
+        allergies: p.allergies,
+        chronicConditions: p.chronicConditions,
+        address: p.address,
+        city: p.city,
+        state: p.state,
+        pincode: p.pincode,
+      };
+    }
+  } else if (user.role === Role.DOCTOR) {
+    const d = await prisma.doctor.findUnique({
+      where: { userId },
+      include: { hospital: { select: { id: true, name: true, city: true } } },
+    });
+    if (d) {
+      profile = {
+        firstName: d.firstName,
+        lastName: d.lastName,
+        specialty: d.specialty,
+        licenseNumber: d.licenseNumber,
+        qualifications: d.qualifications,
+        experienceYears: d.experienceYears,
+        consultationFee: d.consultationFee,
+        availableForVideo: d.availableForVideo,
+        availableForInPerson: d.availableForInPerson,
+        languages: d.languages,
+        isVerified: d.isVerified,
+        rating: d.rating,
+        totalReviews: d.totalReviews,
+        photoUrl: d.photoUrl,
+        hospital: d.hospital,
+      };
+    }
+  } else if (user.role === Role.HOSPITAL_STAFF) {
+    const s = await prisma.hospitalStaff.findUnique({
+      where: { userId },
+      include: { hospital: { select: { id: true, name: true } } },
+    });
+    if (s) {
+      profile = {
+        firstName: s.firstName,
+        lastName: s.lastName,
+        staffType: s.staffType,
+        employeeId: s.employeeId,
+        isVerified: s.isVerified,
+        hospital: s.hospital,
+      };
+    }
+  } else if (user.role === Role.HOSPITAL_ADMIN) {
+    const a = await prisma.hospitalAdmin.findUnique({
+      where: { userId },
+      include: { hospital: true },
+    });
+    if (a) {
+      profile = {
+        firstName: a.firstName,
+        lastName: a.lastName,
+        hospital: a.hospital,
+      };
+    }
+  } else if (user.role === Role.INSURANCE_PROVIDER) {
+    const ip = await prisma.insuranceProvider.findUnique({ where: { userId } });
+    if (ip) {
+      profile = {
+        companyName: ip.companyName,
+        licenseNumber: ip.licenseNumber,
+        isVerified: ip.isVerified,
+        verifiedAt: ip.verifiedAt,
+      };
+    }
+  } else if (user.role === Role.SUPER_ADMIN) {
+    const sa = await prisma.superAdmin.findUnique({ where: { userId } });
+    if (sa) {
+      profile = {
+        firstName: sa.firstName,
+        lastName: sa.lastName,
+      };
+    }
+  }
+
+  return { user, profile };
 }

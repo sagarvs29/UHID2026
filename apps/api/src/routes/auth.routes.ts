@@ -1,12 +1,34 @@
+/**
+ * auth.routes.ts
+ * All Phase 1 authentication routes.
+ *
+ * Public:
+ *   POST   /register/patient     — Patient self-registration
+ *   POST   /register/doctor      — Doctor self-registration (pending approval)
+ *   POST   /register/staff       — Hospital Staff self-registration (pending approval)
+ *   POST   /register/insurance   — Insurance Provider self-registration (pending Super Admin approval)
+ *   POST   /login                — Login for ALL roles (same endpoint)
+ *   POST   /refresh              — Refresh access token
+ *   GET    /verify-email         — Verify email from link (?token=xxx)
+ *   POST   /forgot-password      — Send password reset email
+ *   POST   /reset-password       — Reset password with token
+ *
+ * Authenticated:
+ *   POST   /logout               — Logout (revoke tokens)
+ *   GET    /me                   — Get current user + role profile
+ *   POST   /change-password      — Change password (requires current password)
+ */
 import { Router } from 'express';
 import * as authCtrl from '@/controllers/auth.controller';
 import { authenticate } from '@/middlewares/auth.middleware';
 import { validate } from '@/middlewares/validate.middleware';
 import {
-  registerSchema,
+  patientRegisterSchema,
+  doctorRegisterSchema,
+  staffRegisterSchema,
+  insuranceRegisterSchema,
   loginSchema,
-  sendOtpSchema,
-  verifyOtpSchema,
+  verifyEmailSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
   changePasswordSchema,
@@ -14,18 +36,47 @@ import {
 
 const router = Router();
 
-// Public routes
-router.post('/register', validate(registerSchema), authCtrl.register);
+// ─── Public routes ────────────────────────────────────────
+
+// Registration — role-specific endpoints
+router.post(
+  '/register/patient',
+  validate(patientRegisterSchema),
+  authCtrl.registerPatient
+);
+router.post(
+  '/register/doctor',
+  validate(doctorRegisterSchema),
+  authCtrl.registerDoctor
+);
+router.post(
+  '/register/staff',
+  validate(staffRegisterSchema),
+  authCtrl.registerStaff
+);
+router.post(
+  '/register/insurance',
+  validate(insuranceRegisterSchema),
+  authCtrl.registerInsurance
+);
+
+// Login (all roles)
 router.post('/login', validate(loginSchema), authCtrl.login);
+
+// Token refresh
 router.post('/refresh', authCtrl.refresh);
-router.post('/send-otp', validate(sendOtpSchema), authCtrl.sendOtp);
-router.post('/verify-otp', validate(verifyOtpSchema), authCtrl.verifyOtp);
+
+// Email verification (link from email, token in query string)
+router.get('/verify-email', validate(verifyEmailSchema, 'query'), authCtrl.verifyEmail);
+
+// Password reset
 router.post('/forgot-password', validate(forgotPasswordSchema), authCtrl.forgotPassword);
 router.post('/reset-password', validate(resetPasswordSchema), authCtrl.resetPassword);
 
-// Protected routes
-router.get('/me', authenticate, authCtrl.getMe);
+// ─── Authenticated routes ─────────────────────────────────
+
 router.post('/logout', authenticate, authCtrl.logout);
+router.get('/me', authenticate, authCtrl.getMe);
 router.post(
   '/change-password',
   authenticate,
