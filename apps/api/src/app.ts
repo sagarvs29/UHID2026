@@ -7,6 +7,7 @@ import rateLimit from 'express-rate-limit';
 import { errorHandler, notFound } from '@/middlewares/error.middleware';
 import authRouter from '@/routes/auth.routes';
 import hospitalsRouter from '@/routes/hospitals.routes';
+import recordsRouter from '@/routes/records.routes';
 import logger from '@/lib/logger';
 
 export function createApp(): Application {
@@ -67,7 +68,8 @@ export function createApp(): Application {
   // ─── Routes ─────────────────────────────────────────────
   app.use('/api/v1/auth', authLimiter, authRouter);
   app.use('/api/v1/hospitals', hospitalsRouter); // Public — registration dropdown
-  // Phase 2+ routes will be added here:
+  app.use('/api/v1/records', recordsRouter);     // Phase 2 — medical records
+  // Phase 3+ routes will be added here:
   // app.use('/api/patients', authenticate, patientRouter);
   // app.use('/api/doctors', authenticate, doctorRouter);
   // app.use('/api/records', authenticate, recordRouter);
