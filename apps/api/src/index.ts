@@ -1,10 +1,13 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import path from 'path';
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 import http from 'http';
 import { createApp } from './app';
 import { initSocket } from './lib/socket';
 import { prisma } from './lib/prisma';
 import { redis } from './lib/redis';
 import logger from './lib/logger';
+import { expireStaleConsents } from './services/consent.service';
 
 const PORT = process.env.PORT ?? 5000;
 
@@ -37,6 +40,16 @@ async function bootstrap() {
     logger.info(`[Server] Environment: ${process.env.NODE_ENV}`);
     logger.info(`[Server] Health: http://localhost:${PORT}/health`);
   });
+
+  // ─── Consent expiry cron (every 15 minutes) ──────────────
+  setInterval(async () => {
+    try {
+      const count = await expireStaleConsents();
+      if (count > 0) logger.info(`[Cron] Expired ${count} stale consent(s)`);
+    } catch (err) {
+      logger.error('[Cron] Consent expiry failed:', err);
+    }
+  }, 15 * 60 * 1000);
 
   // Graceful shutdown
   const shutdown = async (signal: string) => {

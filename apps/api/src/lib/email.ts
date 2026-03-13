@@ -194,3 +194,86 @@ export async function sendApprovalPendingEmail(
     `,
   });
 }
+
+// ─── Consent OTP Email ────────────────────────────────────────────────────────
+export async function sendConsentOtpEmail(
+  to: string,
+  patientName: string,
+  otp: string,
+  requesterName: string,
+  requesterType: string,
+  scope: string[]
+): Promise<void> {
+  const scopeList = scope.map((s) => `<li>${s.replace(/_/g, ' ')}</li>`).join('');
+  await transporter.sendMail({
+    from: `"UHID Health" <${process.env.SMTP_USER}>`,
+    to,
+    subject: `Approve Record Access — ${requesterName} is requesting your data`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto;">
+        <h2 style="color: #2563EB;">Record Access Request</h2>
+        <p>Hello <strong>${patientName}</strong>,</p>
+        <p><strong>${requesterName}</strong> (${requesterType}) is requesting access to your medical records.</p>
+        <div style="background: #F3F4F6; border-radius: 8px; padding: 16px; margin: 16px 0;">
+          <p style="margin: 0 0 8px; font-size: 13px; color: #374151;"><strong>Requested scope:</strong></p>
+          <ul style="margin: 0; padding-left: 20px; color: #374151; font-size: 13px;">${scopeList}</ul>
+        </div>
+        <p>To <strong>approve</strong> this request, enter the OTP below on the UHID app:</p>
+        <div style="background: #EFF6FF; border: 2px solid #2563EB; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+          <span style="font-size: 36px; font-weight: bold; letter-spacing: 10px; color: #1D4ED8;">${otp}</span>
+        </div>
+        <p style="color: #6B7280; font-size: 13px;">This OTP expires in <strong>10 minutes</strong>. Do not share it with anyone, including the requester.</p>
+        <p style="color: #6B7280; font-size: 13px;">If you did not expect this request, you can safely ignore this email or deny the request in the app.</p>
+        <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 20px 0;" />
+        <p style="color: #9CA3AF; font-size: 12px;">UHID — UniHealth ID Platform</p>
+      </div>
+    `,
+  });
+}
+
+// ─── Consent Status Notification Email ────────────────────────────────────────
+export async function sendConsentStatusEmail(
+  to: string,
+  recipientName: string,
+  status: 'APPROVED' | 'DENIED' | 'REVOKED',
+  patientName: string,
+  expiresAt?: Date | null
+): Promise<void> {
+  const statusConfig: Record<string, { subject: string; color: string; message: string }> = {
+    APPROVED: {
+      subject: `Access Approved — ${patientName} has approved your request`,
+      color: '#16A34A',
+      message: `<strong>${patientName}</strong> has approved your medical record access request.${
+        expiresAt
+          ? ` Access is valid until <strong>${expiresAt.toUTCString()}</strong>.`
+          : ' Access has been granted permanently until revoked.'
+      }`,
+    },
+    DENIED: {
+      subject: `Access Denied — ${patientName} has denied your request`,
+      color: '#DC2626',
+      message: `<strong>${patientName}</strong> has denied your medical record access request.`,
+    },
+    REVOKED: {
+      subject: `Access Revoked — ${patientName} has revoked your access`,
+      color: '#D97706',
+      message: `<strong>${patientName}</strong> has revoked your access to their medical records. You will no longer be able to view their data.`,
+    },
+  };
+
+  const cfg = statusConfig[status];
+  await transporter.sendMail({
+    from: `"UHID Health" <${process.env.SMTP_USER}>`,
+    to,
+    subject: cfg.subject,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto;">
+        <h2 style="color: ${cfg.color};">Consent ${status.charAt(0) + status.slice(1).toLowerCase()}</h2>
+        <p>Hello <strong>${recipientName}</strong>,</p>
+        <p>${cfg.message}</p>
+        <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 20px 0;" />
+        <p style="color: #9CA3AF; font-size: 12px;">UHID — UniHealth ID Platform</p>
+      </div>
+    `,
+  });
+}

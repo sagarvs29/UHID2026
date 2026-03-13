@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate, authorize } from '@/middlewares/auth.middleware';
 import { handleUpload } from '@/middlewares/upload.middleware';
 import { validate } from '@/middlewares/validate.middleware';
+import { requireConsent } from '@/middlewares/consent.middleware';
 import { uploadRecordSchema, getRecordsQuerySchema } from '@/validators/records.validator';
 import * as controller from '@/controllers/records.controller';
 
@@ -26,6 +27,7 @@ router.get(
   '/record/:id/download',
   authenticate,
   authorize('PATIENT', 'DOCTOR'),
+  requireConsent,
   controller.downloadRecord
 );
 
@@ -34,6 +36,7 @@ router.get(
   '/record/:id',
   authenticate,
   authorize('PATIENT', 'DOCTOR', 'HOSPITAL_STAFF', 'HOSPITAL_ADMIN'),
+  requireConsent,
   controller.getRecord
 );
 
@@ -42,6 +45,7 @@ router.get(
   '/:uhid',
   authenticate,
   authorize('PATIENT', 'DOCTOR', 'HOSPITAL_STAFF', 'HOSPITAL_ADMIN'),
+  requireConsent,
   validate(getRecordsQuerySchema, 'query'),
   controller.getRecords
 );
