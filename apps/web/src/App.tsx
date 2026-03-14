@@ -19,6 +19,7 @@ import DoctorDashboardPage from '@/pages/doctor/DashboardPage';
 import StaffDashboardPage from '@/pages/staff/DashboardPage';
 import AdminDashboardPage from '@/pages/admin/DashboardPage';
 import InsuranceDashboardPage from '@/pages/insurance/DashboardPage';
+import ComingSoonPage from '@/pages/ComingSoonPage';
 
 const NotFoundPage = () => (
   <div className="flex min-h-screen items-center justify-center bg-background">
@@ -93,6 +94,10 @@ export default function App() {
           }
         >
           <Route path="dashboard" element={<PatientDashboardPage />} />
+          <Route path="records"   element={<ComingSoonPage />} />
+          <Route path="consent"   element={<ComingSoonPage />} />
+          <Route path="qr"        element={<ComingSoonPage />} />
+          <Route path="profile"   element={<ComingSoonPage />} />
         </Route>
 
         {/* ─── Doctor routes ─── */}
@@ -105,6 +110,10 @@ export default function App() {
           }
         >
           <Route path="dashboard" element={<DoctorDashboardPage />} />
+          <Route path="patients"  element={<ComingSoonPage />} />
+          <Route path="consents"  element={<ComingSoonPage />} />
+          <Route path="records"   element={<ComingSoonPage />} />
+          <Route path="profile"   element={<ComingSoonPage />} />
         </Route>
 
         {/* ─── Staff routes ─── */}
@@ -117,6 +126,10 @@ export default function App() {
           }
         >
           <Route path="dashboard" element={<StaffDashboardPage />} />
+          <Route path="upload"    element={<ComingSoonPage />} />
+          <Route path="search"    element={<ComingSoonPage />} />
+          <Route path="records"   element={<ComingSoonPage />} />
+          <Route path="profile"   element={<ComingSoonPage />} />
         </Route>
 
         {/* ─── Admin routes ─── */}
@@ -129,6 +142,10 @@ export default function App() {
           }
         >
           <Route path="dashboard" element={<AdminDashboardPage />} />
+          <Route path="staff"     element={<ComingSoonPage />} />
+          <Route path="doctors"   element={<ComingSoonPage />} />
+          <Route path="audit"     element={<ComingSoonPage />} />
+          <Route path="analytics" element={<ComingSoonPage />} />
         </Route>
 
         {/* ─── Insurance routes ─── */}
@@ -140,7 +157,11 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-          <Route path="dashboard" element={<InsuranceDashboardPage />} />
+          <Route path="dashboard"       element={<InsuranceDashboardPage />} />
+          <Route path="claims/pending"  element={<ComingSoonPage />} />
+          <Route path="claims/approved" element={<ComingSoonPage />} />
+          <Route path="access"          element={<ComingSoonPage />} />
+          <Route path="profile"         element={<ComingSoonPage />} />
         </Route>
 
         {/* ─── Default redirect ─── */}

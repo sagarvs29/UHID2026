@@ -33,10 +33,10 @@ interface NavItem {
 const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   PATIENT: [
     { to: '/patient/dashboard', icon: Home, label: 'Dashboard' },
-    { to: '/records', icon: FileText, label: 'My Records' },
-    { to: '/consent', icon: Shield, label: 'Consents' },
-    { to: '/qr', icon: QrCode, label: 'My QR Code' },
-    { to: '/profile', icon: User, label: 'Profile' },
+    { to: '/patient/records',   icon: FileText, label: 'My Records' },
+    { to: '/patient/consent',   icon: Shield, label: 'Consents' },
+    { to: '/patient/qr',        icon: QrCode, label: 'My QR Code' },
+    { to: '/patient/profile',   icon: User, label: 'Profile' },
   ],
   DOCTOR: [
     { to: '/doctor/dashboard', icon: Home, label: 'Dashboard' },
