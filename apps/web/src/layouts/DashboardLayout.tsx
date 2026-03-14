@@ -2,6 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth.store';
 import type { Role } from '@/stores/auth.store';
 import { useLogout } from '@/hooks/useAuth';
+import NotificationBell from '@/components/NotificationBell';
 import {
   Home,
   FileText,
@@ -24,6 +25,8 @@ import {
   Globe,
   BadgeCheck,
   Landmark,
+  Calendar,
+  Stethoscope,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -36,18 +39,21 @@ interface NavItem {
 
 const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   PATIENT: [
-    { to: '/patient/dashboard', icon: Home, label: 'Dashboard' },
-    { to: '/patient/records',   icon: FileText, label: 'My Records' },
-    { to: '/patient/consent',   icon: Shield, label: 'Consents' },
-    { to: '/patient/qr',        icon: QrCode, label: 'My QR Code' },
-    { to: '/patient/profile',   icon: User, label: 'Profile' },
+    { to: '/patient/dashboard',    icon: Home,         label: 'Dashboard' },
+    { to: '/patient/records',      icon: FileText,     label: 'My Records' },
+    { to: '/patient/consent',      icon: Shield,       label: 'Consents' },
+    { to: '/patient/find-doctor',  icon: Stethoscope,  label: 'Find a Doctor' },
+    { to: '/patient/appointments', icon: Calendar,     label: 'Appointments' },
+    { to: '/patient/qr',           icon: QrCode,       label: 'My QR Code' },
+    { to: '/patient/profile',      icon: User,         label: 'Profile' },
   ],
   DOCTOR: [
-    { to: '/doctor/dashboard', icon: Home, label: 'Dashboard' },
-    { to: '/doctor/patients', icon: Users, label: 'My Patients' },
-    { to: '/doctor/consents', icon: Shield, label: 'Consents' },
-    { to: '/doctor/records', icon: FileText, label: 'Records' },
-    { to: '/doctor/profile', icon: User, label: 'Profile' },
+    { to: '/doctor/dashboard',    icon: Home,      label: 'Dashboard' },
+    { to: '/doctor/patients',     icon: Users,     label: 'My Patients' },
+    { to: '/doctor/consents',     icon: Shield,    label: 'Consents' },
+    { to: '/doctor/records',      icon: FileText,  label: 'Records' },
+    { to: '/doctor/appointments', icon: Calendar,  label: 'Appointments' },
+    { to: '/doctor/profile',      icon: User,      label: 'Profile' },
   ],
   HOSPITAL_STAFF: [
     { to: '/staff/dashboard', icon: Home, label: 'Dashboard' },
@@ -206,6 +212,7 @@ export default function DashboardLayout() {
                 {roleLabel}
               </span>
             )}
+            <NotificationBell />
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
               <span className="text-xs font-bold text-primary">
                 {user?.name?.charAt(0)?.toUpperCase()}

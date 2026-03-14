@@ -6,6 +6,10 @@ import type { DecodeResponse, ClinicalSummaryResponse } from '@/types/ai';
 import type { PublicEmergencyData, QrScanLog, GeneratedQr, InvalidateResult, SosResult } from '@/types/qr';
 import type { ClaimSummary, ClaimDetail, SubmitClaimResponse } from '@/types/insurance';
 import type { AuditLogEntry, HospitalAnalytics, PlatformAnalytics, HospitalRow, PendingMember, ActiveStaffResponse } from '@/types/admin';
+import type {
+  DoctorCard, DoctorsResponse, SlotsResponse, AppointmentsResponse,
+  AppointmentSummary, BookAppointmentResult, JitsiTokenResult, NotificationsResponse, NotificationItem,
+} from '@/types/telehealth';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 export const MOCK_UHID = 'UHID-AB12-CD34-5678';
@@ -543,6 +547,126 @@ export const mockPlatformAnalytics: PlatformAnalytics = {
   aiUsageThisMonth:      9800,
 };
 
+// ─── Phase 9: Telehealth fixtures ────────────────────────────────────────────
+export const MOCK_DOCTOR_ID      = 'doc_card_001';
+export const MOCK_APPOINTMENT_ID = 'appt_test_001';
+export const MOCK_NOTIF_ID       = 'notif_test_001';
+
+export const mockDoctorCard: DoctorCard = {
+  id:                   MOCK_DOCTOR_ID,
+  userId:               'user_doc_001',
+  name:                 'Dr. Priya Sharma',
+  specialty:            'Internal Medicine',
+  hospital:             'Apollo Hospital',
+  hospitalId:           MOCK_HOSPITAL_ID,
+  city:                 'Mumbai',
+  experience:           12,
+  consultationFee:      800,
+  rating:               4.7,
+  totalReviews:         134,
+  languages:            ['English', 'Hindi'],
+  photoUrl:             null,
+  availableForVideo:    true,
+  availableForInPerson: true,
+  appointmentTypes:     ['IN_PERSON', 'VIDEO'],
+};
+
+export const mockDoctorsResponse: DoctorsResponse = {
+  total:      1,
+  page:       1,
+  limit:      12,
+  totalPages: 1,
+  doctors:    [mockDoctorCard],
+};
+
+export const mockSlotsResponse: SlotsResponse = {
+  doctorId:            MOCK_DOCTOR_ID,
+  slotDurationMinutes: 30,
+  slots: [
+    {
+      date:      '2026-05-12',
+      available: ['09:00', '09:30', '10:00', '14:00', '14:30'],
+      booked:    ['11:00'],
+    },
+    {
+      date:      '2026-05-13',
+      available: ['09:00', '10:30'],
+      booked:    [],
+    },
+  ],
+};
+
+export const mockAppointmentSummary: AppointmentSummary = {
+  id:                 MOCK_APPOINTMENT_ID,
+  status:             'CONFIRMED',
+  type:               'VIDEO',
+  scheduledAt:        new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+  confirmationNumber: 'APT-2026-98765',
+  chiefComplaint:     'Persistent dry cough',
+  doctor:             { name: 'Dr. Priya Sharma',  specialty: 'Internal Medicine' },
+  patient:            { name: 'Rohan Mehta', uhid: MOCK_UHID },
+  hospital:           { name: 'Apollo Hospital' },
+  videoRoomName:      'uhid-appointment-appt_test_001',
+  completedAt:        null,
+  cancelReason:       null,
+};
+
+export const mockAppointmentsResponse: AppointmentsResponse = {
+  total:        1,
+  page:         1,
+  limit:        10,
+  totalPages:   1,
+  appointments: [mockAppointmentSummary],
+};
+
+export const mockBookResult: BookAppointmentResult = {
+  appointmentId:      MOCK_APPOINTMENT_ID,
+  status:             'CONFIRMED',
+  scheduledAt:        new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+  type:               'VIDEO',
+  confirmationNumber: 'APT-2026-98765',
+  doctor:             { name: 'Dr. Priya Sharma', hospital: 'Apollo Hospital' },
+  videoRoomName:      'uhid-appointment-appt_test_001',
+};
+
+export const mockJitsiToken: JitsiTokenResult = {
+  roomName:   'uhid-appointment-appt_test_001',
+  jitsiToken: 'eyJhbGciOiJIUzI1NiJ9.e30.mock_token',
+  domain:     'meet.jit.si',
+  expiresAt:  new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+};
+
+export const mockNotification: NotificationItem = {
+  id:        MOCK_NOTIF_ID,
+  type:      'APPOINTMENT_BOOKED',
+  title:     'Appointment Confirmed',
+  message:   'Your appointment with Dr. Priya Sharma on May 12, 2026 at 9:00 AM has been confirmed.',
+  link:      '/patient/appointments',
+  isRead:    false,
+  readAt:    null,
+  metadata:  { appointmentId: MOCK_APPOINTMENT_ID },
+  createdAt: new Date().toISOString(),
+  expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+};
+
+export const mockNotification2: NotificationItem = {
+  id:        'notif_test_002',
+  type:      'APPOINTMENT_REMINDER',
+  title:     'Appointment Reminder',
+  message:   'You have an appointment tomorrow at 9:00 AM.',
+  link:      '/patient/appointments',
+  isRead:    true,
+  readAt:    new Date().toISOString(),
+  metadata:  null,
+  createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+  expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+};
+
+export const mockNotificationsResponse: NotificationsResponse = {
+  notifications: [mockNotification, mockNotification2],
+  unreadCount:   1,
+};
+
 // ─── Handlers ─────────────────────────────────────────────────────────────────
 export const handlers = [
   // POST /api/auth/refresh — needed when any 401 triggers the axios interceptor's token refresh
@@ -963,5 +1087,57 @@ export const handlers = [
   // GET /api/v1/admin/super/analytics
   http.get('/api/v1/admin/super/analytics', () => {
     return HttpResponse.json({ success: true, data: mockPlatformAnalytics });
+  }),
+
+  // ─── Phase 9: Telehealth & Notifications handlers ──────────────────────────
+
+  // GET /api/v1/hospital/doctors
+  http.get('/api/v1/hospital/doctors', () => {
+    return HttpResponse.json(mockDoctorsResponse);
+  }),
+
+  // GET /api/v1/hospital/doctors/:id/slots
+  http.get('/api/v1/hospital/doctors/:id/slots', () => {
+    return HttpResponse.json(mockSlotsResponse);
+  }),
+
+  // POST /api/v1/hospital/appointments
+  http.post('/api/v1/hospital/appointments', () => {
+    return HttpResponse.json(mockBookResult, { status: 201 });
+  }),
+
+  // GET /api/v1/hospital/appointments
+  http.get('/api/v1/hospital/appointments', () => {
+    return HttpResponse.json(mockAppointmentsResponse);
+  }),
+
+  // PATCH /api/v1/hospital/appointments/:id/cancel
+  http.patch('/api/v1/hospital/appointments/:id/cancel', () => {
+    return HttpResponse.json({ message: 'Appointment cancelled.' });
+  }),
+
+  // GET /api/v1/hospital/appointments/join/:id
+  http.get('/api/v1/hospital/appointments/join/:id', () => {
+    return HttpResponse.json(mockJitsiToken);
+  }),
+
+  // POST /api/v1/hospital/appointments/:id/review
+  http.post('/api/v1/hospital/appointments/:id/review', () => {
+    return HttpResponse.json({ message: 'Review submitted.' }, { status: 201 });
+  }),
+
+  // GET /api/v1/notifications
+  http.get('/api/v1/notifications', () => {
+    return HttpResponse.json(mockNotificationsResponse);
+  }),
+
+  // PATCH /api/v1/notifications/read-all
+  http.patch('/api/v1/notifications/read-all', () => {
+    return HttpResponse.json({ message: 'All notifications marked as read.', updatedCount: 2 });
+  }),
+
+  // PATCH /api/v1/notifications/:id/read
+  http.patch('/api/v1/notifications/:id/read', () => {
+    return HttpResponse.json({ message: 'Notification marked as read.' });
   }),
 ];

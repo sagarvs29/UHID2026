@@ -14,6 +14,8 @@ import aiRouter from '@/routes/ai.routes';
 import qrRouter from '@/routes/qr.routes';
 import insuranceRouter from '@/routes/insurance.routes';
 import adminRouter from '@/routes/admin.routes';
+import telehealthRouter from '@/routes/telehealth.routes';
+import notificationsRouter from '@/routes/notifications.routes';
 import logger from '@/lib/logger';
 
 export function createApp(): Application {
@@ -81,6 +83,8 @@ export function createApp(): Application {
   app.use('/api/v1/qr', qrRouter);               // Phase 6 — QR & Emergency access
   app.use('/api/v1/insurance', insuranceRouter);  // Phase 7 — Insurance portal
   app.use('/api/v1/admin', adminRouter);          // Phase 8 — Admin portal & Audit
+  app.use('/api/v1/hospital', telehealthRouter);  // Phase 9 — Telehealth & Appointments
+  app.use('/api/v1/notifications', notificationsRouter); // Phase 9 — Notifications
   // app.use('/api/patients', authenticate, patientRouter);
   // app.use('/api/doctors', authenticate, doctorRouter);
   // app.use('/api/records', authenticate, recordRouter);
