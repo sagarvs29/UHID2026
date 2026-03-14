@@ -11,6 +11,7 @@ import recordsRouter from '@/routes/records.routes';
 import consentRouter from '@/routes/consent.routes';
 import clinicalRouter from '@/routes/clinical.routes';
 import aiRouter from '@/routes/ai.routes';
+import qrRouter from '@/routes/qr.routes';
 import logger from '@/lib/logger';
 
 export function createApp(): Application {
@@ -75,6 +76,7 @@ export function createApp(): Application {
   app.use('/api/v1/consents', consentRouter);    // Phase 3 — consent management
   app.use('/api/v1/clinical', clinicalRouter);   // Phase 4 — doctor portal & pharma-check
   app.use('/api/v1/ai', aiRouter);               // Phase 5 — AI features
+  app.use('/api/v1/qr', qrRouter);               // Phase 6 — QR & Emergency access
   // app.use('/api/patients', authenticate, patientRouter);
   // app.use('/api/doctors', authenticate, doctorRouter);
   // app.use('/api/records', authenticate, recordRouter);

@@ -3,6 +3,7 @@ import type { MedicalRecord, MedicalRecordSummary, RecordsListResponse, Download
 import type { ActiveConsent, PendingConsent, ConsentHistoryResponse } from '@/types/consent';
 import type { PatientProfile, ClinicalNote, Prescription, PharmaCheckResult } from '@/types/clinical';
 import type { DecodeResponse, ClinicalSummaryResponse } from '@/types/ai';
+import type { PublicEmergencyData, QrScanLog, GeneratedQr, InvalidateResult, SosResult } from '@/types/qr';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 export const MOCK_UHID = 'UHID-AB12-CD34-5678';
@@ -273,6 +274,106 @@ export const mockClinicalSummaryResponse: ClinicalSummaryResponse = {
   lastUpdated:     '2026-01-20T10:00:00.000Z',
 };
 
+// ─── QR fixtures ─────────────────────────────────────────────────────────────
+export const MOCK_QR_TOKEN    = 'eyJhbGciOiJIUzI1NiJ9.mock.token';
+export const MOCK_SOS_ID      = 'sos_test_001';
+export const MOCK_QR_ID       = 'qr_test_001';
+
+export const mockPublicEmergencyData: PublicEmergencyData = {
+  uhid:               MOCK_UHID,
+  bloodGroup:         'B_POSITIVE',
+  hasCriticalAllergy: true,
+  emergencyContact: {
+    name:     'Meena',
+    relation: 'Wife',
+    phone:    '+91-9812345678',
+  },
+  scannedAt: new Date().toISOString(),
+};
+
+export const mockDoctorScanData = {
+  uhid:          MOCK_UHID,
+  name:          'Rohan Mehta',
+  age:           35,
+  bloodGroup:    'B_POSITIVE',
+  allergies: [
+    { name: 'Penicillin', reaction: 'Anaphylaxis', severity: 'SEVERE' },
+    { name: 'Sulfa drugs', reaction: 'Rash', severity: 'MODERATE' },
+  ],
+  currentMedications: [
+    { name: 'Metformin', dose: '500mg', frequency: 'twice daily' },
+  ],
+  chronicConditions: ['Type 2 Diabetes (E11.9)', 'Hypertension (I10)'],
+  pastSurgeries:     ['Cardiac bypass — Apollo Pune (March 2024)'],
+  emergencyContacts: [
+    { name: 'Meena', relation: 'Wife', phone: '+91-9812345678' },
+  ],
+  accessExpiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+};
+
+export const mockGeneratedQr: GeneratedQr = {
+  qrId:      MOCK_QR_ID,
+  qrToken:   MOCK_QR_TOKEN,
+  qrImageUrl: null,
+  expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+  isOneTime: true,
+};
+
+export const mockScanLogs: QrScanLog[] = [
+  {
+    id:               'log_001',
+    tier:             2,
+    scanType:         'DOCTOR_SCAN',
+    scannerName:      'Dr. Priya Sharma',
+    scannerUhidId:    'DR-001234',
+    organization:     'Manipal Hospital Bangalore',
+    location:         'Bangalore, Karnataka',
+    isSuspicious:     false,
+    suspicionReason:  null,
+    reportedByPatient: false,
+    scannedAt:        new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id:               'log_002',
+    tier:             1,
+    scanType:         'PUBLIC_SCAN',
+    scannerName:      null,
+    scannerUhidId:    null,
+    organization:     null,
+    location:         'Bangalore, Karnataka',
+    isSuspicious:     false,
+    suspicionReason:  null,
+    reportedByPatient: false,
+    scannedAt:        new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id:               'log_003',
+    tier:             1,
+    scanType:         'SUSPICIOUS_SCAN',
+    scannerName:      null,
+    scannerUhidId:    null,
+    organization:     null,
+    location:         'Mumbai, Maharashtra',
+    isSuspicious:     true,
+    suspicionReason:  'RATE_LIMIT_EXCEEDED',
+    reportedByPatient: false,
+    scannedAt:        new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+  },
+];
+
+export const mockInvalidateResult: InvalidateResult = {
+  invalidatedCount:  2,
+  newQrGeneratedAt:  new Date().toISOString(),
+};
+
+export const mockSosResult: SosResult = {
+  sosId:                  MOCK_SOS_ID,
+  emergencyCode:          'EMG-4X9R',
+  emergencyCodeExpiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+  notifiedContacts:       2,
+  notifiedHospitals:      3,
+};
+
 // ─── Handlers ─────────────────────────────────────────────────────────────────
 export const handlers = [
   // POST /api/auth/refresh — needed when any 401 triggers the axios interceptor's token refresh
@@ -485,5 +586,74 @@ export const handlers = [
   // POST /api/v1/ai/clinical-summary
   http.post('/api/v1/ai/clinical-summary', async () => {
     return HttpResponse.json({ success: true, data: mockClinicalSummaryResponse });
+  }),
+
+  // ─── QR fixtures ─────────────────────────────────────────────────────────
+
+  // GET /api/v1/qr/emergency/:uhid — Tier 1 public data
+  http.get('/api/v1/qr/emergency/:uhid', ({ params }) => {
+    const { uhid } = params as { uhid: string };
+    if (uhid === MOCK_UHID) {
+      return HttpResponse.json({
+        success: true,
+        tier: 1,
+        data: mockPublicEmergencyData,
+      });
+    }
+    return HttpResponse.json(
+      { success: false, error: 'Patient not found' },
+      { status: 404 }
+    );
+  }),
+
+  // POST /api/v1/qr/scan/doctor — Tier 2 doctor scan
+  http.post('/api/v1/qr/scan/doctor', async () => {
+    return HttpResponse.json({ success: true, tier: 2, data: mockDoctorScanData });
+  }),
+
+  // POST /api/v1/qr/generate — Tier 3 one-time share
+  http.post('/api/v1/qr/generate', async () => {
+    return HttpResponse.json(
+      { success: true, tier: 3, data: mockGeneratedQr },
+      { status: 201 }
+    );
+  }),
+
+  // GET /api/v1/qr/scan-logs
+  http.get('/api/v1/qr/scan-logs', () => {
+    return HttpResponse.json({ success: true, data: mockScanLogs });
+  }),
+
+  // POST /api/v1/qr/invalidate
+  http.post('/api/v1/qr/invalidate', async () => {
+    return HttpResponse.json({
+      success: true,
+      message: 'All active QR tokens invalidated. New emergency QR generated.',
+      data: mockInvalidateResult,
+    });
+  }),
+
+  // POST /api/v1/qr/sos
+  http.post('/api/v1/qr/sos', async () => {
+    return HttpResponse.json(
+      {
+        success: true,
+        message: 'SOS activated. Emergency contacts and nearby hospitals notified.',
+        data: mockSosResult,
+      },
+      { status: 201 }
+    );
+  }),
+
+  // POST /api/v1/qr/emergency/override
+  http.post('/api/v1/qr/emergency/override', async () => {
+    return HttpResponse.json({
+      success: true,
+      data: {
+        accessGranted: true,
+        expiresAt:     new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
+        auditLogId:    'audit_override_001',
+      },
+    });
   }),
 ];

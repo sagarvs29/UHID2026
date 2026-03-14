@@ -42,6 +42,10 @@ import ClinicalNotesPage from '@/pages/doctor/ClinicalNotesPage';
 import AiReportPage from '@/pages/patient/AiReportPage';
 import AiSummaryPage from '@/pages/doctor/AiSummaryPage';
 
+// Pages - Phase 6: QR & Emergency
+import QrPage from '@/pages/patient/QrPage';
+import EmergencyPage from '@/pages/emergency/EmergencyPage';
+
 const NotFoundPage = () => (
   <div className="flex min-h-screen items-center justify-center bg-background">
     <div className="text-center">
