@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 
 # Routers (added in Phase 5)
-# from routers import report_decoder, clinical_summary, ocr
+from routers import report_decoder, clinical_summary, ocr
 
 app = FastAPI(
     title="UHID AI Service",
@@ -52,6 +52,6 @@ async def health():
 
 
 # ─── Mount routers (Phase 5) ─────────────────────────────────
-# app.include_router(report_decoder.router, prefix="/ai/report", tags=["Report Decoder"])
-# app.include_router(clinical_summary.router, prefix="/ai/summary", tags=["Clinical Summary"])
-# app.include_router(ocr.router, prefix="/ai/ocr", tags=["OCR"])
+app.include_router(report_decoder.router, prefix="/ai/report", tags=["Report Decoder"])
+app.include_router(clinical_summary.router, prefix="/ai/summary", tags=["Clinical Summary"])
+app.include_router(ocr.router, prefix="/ai/ocr", tags=["OCR"])

@@ -38,6 +38,10 @@ import DoctorPatientDashboardPage from '@/pages/doctor/PatientDashboardPage';
 import NewPrescriptionPage from '@/pages/doctor/NewPrescriptionPage';
 import ClinicalNotesPage from '@/pages/doctor/ClinicalNotesPage';
 
+// Pages - Phase 5: AI features
+import AiReportPage from '@/pages/patient/AiReportPage';
+import AiSummaryPage from '@/pages/doctor/AiSummaryPage';
+
 const NotFoundPage = () => (
   <div className="flex min-h-screen items-center justify-center bg-background">
     <div className="text-center">
@@ -105,6 +109,7 @@ export default function App() {
         >
           <Route path="dashboard" element={<PatientDashboardPage />} />
           <Route path="records"   element={<PatientRecordsPage />} />
+          <Route path="records/:id/ai" element={<AiReportPage />} />
           <Route path="consent"   element={<PatientConsentPage />} />
           <Route path="qr"        element={<ComingSoonPage />} />
           <Route path="profile"   element={<ComingSoonPage />} />
@@ -124,6 +129,7 @@ export default function App() {
           <Route path="patient/:uhid"               element={<DoctorPatientDashboardPage />} />
           <Route path="patient/:uhid/prescribe"     element={<NewPrescriptionPage />} />
           <Route path="patient/:uhid/notes"         element={<ClinicalNotesPage />} />
+          <Route path="patient/:uhid/ai-summary"   element={<AiSummaryPage />} />
           <Route path="patients"  element={<ComingSoonPage />} />
           <Route path="consents"  element={<DoctorConsentPage />} />
           <Route path="records"   element={<DoctorRecordsPage />} />

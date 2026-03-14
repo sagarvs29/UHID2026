@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw';
 import type { MedicalRecord, MedicalRecordSummary, RecordsListResponse, DownloadUrlResponse } from '@/types/records';
 import type { ActiveConsent, PendingConsent, ConsentHistoryResponse } from '@/types/consent';
 import type { PatientProfile, ClinicalNote, Prescription, PharmaCheckResult } from '@/types/clinical';
+import type { DecodeResponse, ClinicalSummaryResponse } from '@/types/ai';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 export const MOCK_UHID = 'UHID-AB12-CD34-5678';
@@ -213,6 +214,65 @@ export const mockPharmaCheckWithIssue: PharmaCheckResult = {
   ],
 };
 
+// ─── AI fixtures ──────────────────────────────────────────────────────────────
+export const MOCK_AI_RECORD_ID = MOCK_RECORD_ID;
+
+export const mockDecodeResponse: DecodeResponse = {
+  recordId:         MOCK_RECORD_ID,
+  summaryText:      'Your CBC results are mostly normal. Haemoglobin is slightly low, suggesting mild anaemia.',
+  simplifiedValues: [
+    {
+      parameter:      'Haemoglobin',
+      value:          '11.2 g/dL',
+      normalRange:    '13.5–17.5 g/dL',
+      status:         'LOW',
+      explanation:    'Haemoglobin carries oxygen in red blood cells. Your level is slightly below normal.',
+      recommendation: 'Consider iron-rich foods or supplements. Discuss with your doctor.',
+    },
+    {
+      parameter:      'WBC Count',
+      value:          '6,800 /µL',
+      normalRange:    '4,500–11,000 /µL',
+      status:         'NORMAL',
+      explanation:    'White blood cells are your immune fighters. Your count is healthy.',
+      recommendation: '',
+    },
+  ],
+  overallRiskLevel: 'MODERATE',
+  actionItems:      ['Schedule follow-up with a physician within 2 weeks', 'Start iron supplementation'],
+  disclaimer:       'This AI analysis is for informational purposes only and does not constitute medical advice. Always consult a qualified healthcare professional.',
+  modelUsed:        'gpt-4o',
+  tokensUsed:       1234,
+  cached:           false,
+};
+
+export const mockClinicalSummaryResponse: ClinicalSummaryResponse = {
+  patientUhid:      MOCK_UHID,
+  summaryForDoctor: 'Patient presents with CAP managed with amoxicillin. Mild normocytic anaemia noted on CBC. No major drug-condition conflicts identified.',
+  activeConditions: [
+    { icd10: 'J18.9', description: 'Community-acquired pneumonia', since: '2026-01' },
+    { icd10: 'D50.9', description: 'Iron deficiency anaemia', since: '2025-11' },
+  ],
+  currentMedications: [
+    { drug: 'Amoxicillin 500mg', frequency: 'TDS', since: '2026-01' },
+  ],
+  vitalTrends: {
+    bp:    [{ date: '2026-01', value: '118/76' }],
+    pulse: [{ date: '2026-01', value: '88 bpm' }],
+  },
+  riskScore: {
+    overall:        'MODERATE',
+    cardiovascular: 'LOW',
+    renal:          'LOW',
+    diabetic:       'LOW',
+  },
+  attentionItems:  ['Monitor Hb response to iron supplementation in 4–6 weeks'],
+  modelUsed:       'gpt-4o',
+  tokensUsed:      2100,
+  cached:          false,
+  lastUpdated:     '2026-01-20T10:00:00.000Z',
+};
+
 // ─── Handlers ─────────────────────────────────────────────────────────────────
 export const handlers = [
   // POST /api/auth/refresh — needed when any 401 triggers the axios interceptor's token refresh
@@ -401,5 +461,29 @@ export const handlers = [
   // POST /api/v1/clinical/pharma-check
   http.post('/api/v1/clinical/pharma-check', async () => {
     return HttpResponse.json({ success: true, data: mockPharmaCheckClean });
+  }),
+
+  // ─── AI handlers ─────────────────────────────────────────────────────────
+
+  // GET /api/v1/ai/summary/:recordId — return 404 by default (no cached summary)
+  http.get('/api/v1/ai/summary/:recordId', ({ params }) => {
+    const { recordId } = params as { recordId: string };
+    if (recordId === MOCK_RECORD_ID) {
+      return HttpResponse.json(
+        { success: false, error: 'No AI summary found for this record' },
+        { status: 404 }
+      );
+    }
+    return HttpResponse.json({ success: false, error: 'Record not found' }, { status: 404 });
+  }),
+
+  // POST /api/v1/ai/decode
+  http.post('/api/v1/ai/decode', async () => {
+    return HttpResponse.json({ success: true, data: mockDecodeResponse });
+  }),
+
+  // POST /api/v1/ai/clinical-summary
+  http.post('/api/v1/ai/clinical-summary', async () => {
+    return HttpResponse.json({ success: true, data: mockClinicalSummaryResponse });
   }),
 ];
