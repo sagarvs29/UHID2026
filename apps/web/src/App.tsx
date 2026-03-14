@@ -22,6 +22,12 @@ import SuperAdminDashboardPage from '@/pages/superadmin/DashboardPage';
 import InsuranceDashboardPage from '@/pages/insurance/DashboardPage';
 import ComingSoonPage from '@/pages/ComingSoonPage';
 
+// Pages - Phase 2: Medical Records
+import PatientRecordsPage from '@/pages/patient/RecordsPage';
+import DoctorRecordsPage from '@/pages/doctor/RecordsPage';
+import StaffUploadRecordPage from '@/pages/staff/UploadRecordPage';
+import StaffSearchPatientPage from '@/pages/staff/SearchPatientPage';
+
 const NotFoundPage = () => (
   <div className="flex min-h-screen items-center justify-center bg-background">
     <div className="text-center">
@@ -88,7 +94,7 @@ export default function App() {
           }
         >
           <Route path="dashboard" element={<PatientDashboardPage />} />
-          <Route path="records"   element={<ComingSoonPage />} />
+          <Route path="records"   element={<PatientRecordsPage />} />
           <Route path="consent"   element={<ComingSoonPage />} />
           <Route path="qr"        element={<ComingSoonPage />} />
           <Route path="profile"   element={<ComingSoonPage />} />
@@ -106,7 +112,7 @@ export default function App() {
           <Route path="dashboard" element={<DoctorDashboardPage />} />
           <Route path="patients"  element={<ComingSoonPage />} />
           <Route path="consents"  element={<ComingSoonPage />} />
-          <Route path="records"   element={<ComingSoonPage />} />
+          <Route path="records"   element={<DoctorRecordsPage />} />
           <Route path="profile"   element={<ComingSoonPage />} />
         </Route>
 
@@ -120,8 +126,8 @@ export default function App() {
           }
         >
           <Route path="dashboard" element={<StaffDashboardPage />} />
-          <Route path="upload"    element={<ComingSoonPage />} />
-          <Route path="search"    element={<ComingSoonPage />} />
+          <Route path="upload"    element={<StaffUploadRecordPage />} />
+          <Route path="search"    element={<StaffSearchPatientPage />} />
           <Route path="records"   element={<ComingSoonPage />} />
           <Route path="profile"   element={<ComingSoonPage />} />
         </Route>
