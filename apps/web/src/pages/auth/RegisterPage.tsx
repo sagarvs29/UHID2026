@@ -53,25 +53,31 @@ const ROLES = [
 ] as const;
 
 // ─── Form schemas ─────────────────────────────────────────
-const baseSchema = z
-  .object({
-    firstName: z.string().min(2, 'Min 2 characters').max(80).trim(),
-    lastName: z.string().min(2, 'Min 2 characters').max(80).trim(),
-    email: z.string().email('Invalid email').toLowerCase().trim(),
-    phone: z
-      .string()
-      .regex(/^[6-9]\d{9}$/, 'Invalid Indian mobile (10 digits, starts 6-9)')
-      .optional()
-      .or(z.literal('')),
-    password: passwordSchema,
-    confirmPassword: z.string({ required_error: 'Please confirm your password' }),
-  })
-  .refine((d) => d.password === d.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
-  });
+// We keep extended ZodObjects separate from the refine'd schemas.
+// useForm<T> uses the ZodObject type (full fields).
+// zodResolver uses the full schema (with refine).
 
-const patientSchema = baseSchema.extend({
+const baseFields = {
+  firstName: z.string().min(2, 'Min 2 characters').max(80).trim(),
+  lastName: z.string().min(2, 'Min 2 characters').max(80).trim(),
+  email: z.string().email('Invalid email').toLowerCase().trim(),
+  phone: z
+    .string()
+    .regex(/^[6-9]\d{9}$/, 'Invalid Indian mobile (10 digits, starts 6-9)')
+    .optional()
+    .or(z.literal('')),
+  password: passwordSchema,
+  confirmPassword: z.string({ required_error: 'Please confirm your password' }),
+};
+
+const withPwMatch = <T extends z.ZodRawShape>(shape: T) =>
+  z.object({ ...baseFields, ...shape }).refine(
+    (d) => d.password === d.confirmPassword,
+    { message: 'Passwords do not match', path: ['confirmPassword'] }
+  );
+
+// Patient
+const patientShape = {
   dateOfBirth: z.string({ required_error: 'Date of birth is required' }).refine((v) => {
     const d = new Date(v);
     const age = (Date.now() - d.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
@@ -79,31 +85,37 @@ const patientSchema = baseSchema.extend({
   }, 'Invalid date of birth'),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY'], { required_error: 'Gender is required' }),
   bloodGroup: z.enum(['A_POSITIVE','A_NEGATIVE','B_POSITIVE','B_NEGATIVE','AB_POSITIVE','AB_NEGATIVE','O_POSITIVE','O_NEGATIVE','UNKNOWN']).default('UNKNOWN'),
-});
+};
+const patientSchema = withPwMatch(patientShape);
+type PatientFormData = z.infer<typeof patientSchema>;
 
-const doctorSchema = baseSchema.extend({
+// Doctor
+const doctorShape = {
   hospitalId: z.string({ required_error: 'Hospital is required' }).min(1, 'Hospital is required'),
   specialty: z.string({ required_error: 'Specialty is required' }).min(2).max(100).trim(),
   licenseNumber: z.string({ required_error: 'License number is required' }).min(3).max(50).trim(),
   qualifications: z.string().min(2, 'Enter at least one qualification'),
   experienceYears: z.string().refine((v) => !isNaN(Number(v)) && Number(v) >= 0 && Number(v) <= 80, 'Must be 0–80'),
   consultationFee: z.string().optional().default('0'),
-});
+};
+const doctorSchema = withPwMatch(doctorShape);
+type DoctorFormData = z.infer<typeof doctorSchema>;
 
-const staffSchema = baseSchema.extend({
+// Staff
+const staffShape = {
   hospitalId: z.string({ required_error: 'Hospital is required' }).min(1, 'Hospital is required'),
   staffType: z.enum(['NURSE','PHARMACIST','LAB_TECHNICIAN','RECEPTIONIST','RADIOLOGIST','OTHER'], { required_error: 'Staff type is required' }),
   employeeId: z.string().max(50).optional().or(z.literal('')),
-});
+};
+const staffSchema = withPwMatch(staffShape);
+type StaffFormData = z.infer<typeof staffSchema>;
 
-const insuranceSchema = baseSchema.extend({
+// Insurance
+const insuranceShape = {
   companyName: z.string({ required_error: 'Company name is required' }).min(2).max(200).trim(),
   licenseNumber: z.string({ required_error: 'IRDAI license is required' }).min(3).max(50).trim(),
-});
-
-type PatientFormData = z.infer<typeof patientSchema>;
-type DoctorFormData = z.infer<typeof doctorSchema>;
-type StaffFormData = z.infer<typeof staffSchema>;
+};
+const insuranceSchema = withPwMatch(insuranceShape);
 type InsuranceFormData = z.infer<typeof insuranceSchema>;
 
 // ─── Shared UI helpers ────────────────────────────────────
