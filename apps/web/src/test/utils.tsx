@@ -47,6 +47,24 @@ export const INSURANCE_USER: AuthUser = {
   isPhoneVerified: false,
 };
 
+export const ADMIN_USER: AuthUser = {
+  userId: 'user_admin_001',
+  role: 'HOSPITAL_ADMIN',
+  name: 'Test Admin',
+  email: 'admin@test.internal',
+  isEmailVerified: true,
+  isPhoneVerified: false,
+};
+
+export const SUPER_ADMIN_USER: AuthUser = {
+  userId: 'user_superadmin_001',
+  role: 'SUPER_ADMIN',
+  name: 'Test Super Admin',
+  email: 'superadmin@test.internal',
+  isEmailVerified: true,
+  isPhoneVerified: false,
+};
+
 // ─── Auth store helpers ────────────────────────────────────────────────────────
 export function setMockUser(user: AuthUser) {
   useAuthStore.getState().setAuth(user, 'mock-access-token', 'mock-refresh-token');

@@ -5,10 +5,12 @@ import type { PatientProfile, ClinicalNote, Prescription, PharmaCheckResult } fr
 import type { DecodeResponse, ClinicalSummaryResponse } from '@/types/ai';
 import type { PublicEmergencyData, QrScanLog, GeneratedQr, InvalidateResult, SosResult } from '@/types/qr';
 import type { ClaimSummary, ClaimDetail, SubmitClaimResponse } from '@/types/insurance';
+import type { AuditLogEntry, HospitalAnalytics, PlatformAnalytics, HospitalRow, PendingMember, ActiveStaffResponse } from '@/types/admin';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 export const MOCK_UHID = 'UHID-AB12-CD34-5678';
 export const MOCK_RECORD_ID = 'rec_test_001';
+export const MOCK_HOSPITAL_ID = 'hosp_test_001';
 
 export const mockRecordSummary: MedicalRecordSummary = {
   id:            MOCK_RECORD_ID,
@@ -430,6 +432,117 @@ export const mockSubmitResult: SubmitClaimResponse = {
   riskLevel:   'LOW',
 };
 
+// ─── Admin fixtures ────────────────────────────────────────────────────────────
+
+export const mockPendingMember: PendingMember = {
+  id:              'user_doc_pending_001',
+  profileId:       'doc_pending_001',
+  name:            'Dr. Pending Doctor',
+  role:            'DOCTOR',
+  specialty:       'Cardiology',
+  licenseNumber:   'MCI-2020-001',
+  registeredAt:    '2026-03-01T10:00:00.000Z',
+};
+
+export const mockActiveStaffResponse: ActiveStaffResponse = {
+  doctors: [
+    {
+      id:              'user_doc_001',
+      profileId:       'doc_001',
+      name:            'Dr. Active Doctor',
+      specialty:       'General Medicine',
+      licenseNumber:   'MCI-2019-999',
+      isVerified:      true,
+      isActive:        true,
+    },
+  ],
+  staff: [
+    {
+      id:              'user_staff_001',
+      profileId:       'staff_001',
+      name:            'Nurse Active',
+      staffType:       'NURSE',
+      employeeId:      'EMP-001',
+      isVerified:      true,
+      isActive:        true,
+    },
+  ],
+};
+
+export const mockAuditLogEntry: AuditLogEntry = {
+  id:          'audit_001',
+  action:      'EMERGENCY_OVERRIDE',
+  severity:    'HIGH',
+  actorId:     'user_doc_001',
+  actorRole:   'DOCTOR',
+  targetId:    'pat_001',
+  targetType:  'Patient',
+  hospitalId:  MOCK_HOSPITAL_ID,
+  metadata:    { reason: 'Emergency' },
+  ipAddress:   '192.168.1.1',
+  userAgent:   'Mozilla/5.0',
+  createdAt:   '2026-03-10T09:15:00.000Z',
+};
+
+export const mockHospitalAnalytics: HospitalAnalytics = {
+  totalPatients:                 4820,
+  recordsUploadedThisMonth:      1243,
+  prescriptionsIssuedThisMonth:  892,
+  pendingConsents:               14,
+  emergencyOverridesThisMonth:   2,
+  aiReportsThisMonth:            337,
+  trends: {
+    recordsPerDay: [
+      { date: '2026-03-01', count: 42 },
+      { date: '2026-03-02', count: 38 },
+    ],
+  },
+};
+
+export const mockHospitalRow: HospitalRow = {
+  id:                 MOCK_HOSPITAL_ID,
+  name:               'Apollo Hospital',
+  city:               'Mumbai',
+  state:              'Maharashtra',
+  isVerified:         true,
+  verifiedAt:         '2026-01-01T00:00:00.000Z',
+  isNABH:             true,
+  registrationNumber: 'REG-001',
+  createdAt:          '2025-01-01T00:00:00.000Z',
+  adminName:          'Test Admin',
+  adminEmail:         'admin@test.internal',
+  doctorCount:        25,
+  staffCount:         40,
+};
+
+export const mockPlatformAnalytics: PlatformAnalytics = {
+  users: {
+    total:  12400,
+    byRole: {
+      PATIENT:            10000,
+      DOCTOR:             1500,
+      HOSPITAL_STAFF:     600,
+      HOSPITAL_ADMIN:     50,
+      INSURANCE_PROVIDER: 200,
+      SUPER_ADMIN:        5,
+      PHARMACIST:         45,
+    },
+  },
+  totalRecords:          380000,
+  activeConsents:        8900,
+  claims: {
+    total:    14700,
+    byStatus: {
+      SUBMITTED:  5000,
+      APPROVED:   7200,
+      REJECTED:   1800,
+      PENDING:    700,
+    },
+  },
+  sosEventsThisMonth:    12,
+  aiUsageThisMonth:      9800,
+};
+
 // ─── Handlers ─────────────────────────────────────────────────────────────────
 export const handlers = [
   // POST /api/auth/refresh — needed when any 401 triggers the axios interceptor's token refresh
@@ -784,5 +897,71 @@ export const handlers = [
       success: true,
       data: { ...mockClaimDetail, status: body.status },
     });
+  }),
+
+  // ─── Admin handlers ────────────────────────────────────────────────────────
+
+  // GET /api/v1/admin/pending-verifications
+  http.get('/api/v1/admin/pending-verifications', () => {
+    return HttpResponse.json({ success: true, data: [mockPendingMember] });
+  }),
+
+  // PATCH /api/v1/admin/verify-staff/:userId
+  http.patch('/api/v1/admin/verify-staff/:userId', async () => {
+    return HttpResponse.json({ success: true, message: 'Staff member verified successfully.' });
+  }),
+
+  // PATCH /api/v1/admin/deactivate-staff/:userId
+  http.patch('/api/v1/admin/deactivate-staff/:userId', async () => {
+    return HttpResponse.json({ success: true, message: 'Staff member deactivated.' });
+  }),
+
+  // GET /api/v1/admin/staff
+  http.get('/api/v1/admin/staff', () => {
+    return HttpResponse.json({ success: true, data: mockActiveStaffResponse });
+  }),
+
+  // GET /api/v1/admin/analytics
+  http.get('/api/v1/admin/analytics', () => {
+    return HttpResponse.json({ success: true, data: mockHospitalAnalytics });
+  }),
+
+  // GET /api/v1/admin/audit-logs
+  http.get('/api/v1/admin/audit-logs', () => {
+    return HttpResponse.json({
+      success: true,
+      data: {
+        total: 1, page: 1, limit: 50, totalPages: 1,
+        logs: [mockAuditLogEntry],
+      },
+    });
+  }),
+
+  // GET /api/v1/admin/audit-logs/export
+  http.get('/api/v1/admin/audit-logs/export', () => {
+    return new HttpResponse(
+      'action,severity,actorId,actorRole,targetId,targetType,hospitalId,ipAddress,createdAt\nEMERGENCY_OVERRIDE,HIGH,user_doc_001,DOCTOR,pat_001,Patient,hosp_test_001,192.168.1.1,2026-03-10T09:15:00.000Z',
+      {
+        headers: {
+          'Content-Type': 'text/csv',
+          'Content-Disposition': 'attachment; filename="audit-logs-2026-03-10.csv"',
+        },
+      }
+    );
+  }),
+
+  // GET /api/v1/admin/super/hospitals
+  http.get('/api/v1/admin/super/hospitals', () => {
+    return HttpResponse.json({ success: true, data: [mockHospitalRow] });
+  }),
+
+  // PATCH /api/v1/admin/super/hospitals/:id/verify
+  http.patch('/api/v1/admin/super/hospitals/:id/verify', async () => {
+    return HttpResponse.json({ success: true, message: 'Hospital action applied.' });
+  }),
+
+  // GET /api/v1/admin/super/analytics
+  http.get('/api/v1/admin/super/analytics', () => {
+    return HttpResponse.json({ success: true, data: mockPlatformAnalytics });
   }),
 ];

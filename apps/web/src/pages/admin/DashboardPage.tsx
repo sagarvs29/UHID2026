@@ -1,4 +1,6 @@
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth.store';
+import { useHospitalAnalytics, usePendingVerifications, useAuditLogs } from '@/hooks/useAdmin';
 import {
   Users,
   UserCog,
@@ -9,75 +11,76 @@ import {
   Hospital,
   AlertTriangle,
   Clock,
-  CheckCircle2,
+  FileText,
+  Activity,
+  Brain,
+  Zap,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
-interface ActionCard {
-  label: string;
-  description: string;
-  icon: React.ElementType;
-  href: string;
-  badge?: string;
-  badgeVariant?: 'warning' | 'success' | 'default';
-}
-
-const ACTIONS: ActionCard[] = [
-  {
-    label: 'Pending Verifications',
-    description: 'Review new doctors & staff awaiting approval',
-    icon: Clock,
-    href: '/admin/staff',
-    badge: 'Action needed',
-    badgeVariant: 'warning',
-  },
-  {
-    label: 'Active Staff',
-    description: "Manage your hospital's verified doctors & staff",
-    icon: UserCog,
-    href: '/admin/staff',
-  },
-  {
-    label: 'Manage Doctors',
-    description: 'Review credentials and specializations',
-    icon: Users,
-    href: '/admin/doctors',
-  },
-  {
-    label: 'Audit Logs',
-    description: 'Review all access and changes within your hospital',
-    icon: ScrollText,
-    href: '/admin/audit',
-  },
-  {
-    label: 'Analytics',
-    description: 'Record uploads, consent activity, staff performance',
-    icon: BarChart2,
-    href: '/admin/analytics',
-  },
-  {
-    label: 'Hospital Profile',
-    description: 'Update hospital information and NABH status',
-    icon: Hospital,
-    href: '/admin/hospital',
-  },
-  {
-    label: 'Security Settings',
-    description: 'Manage access policies and permissions',
-    icon: Settings,
-    href: '/admin/settings',
-  },
-];
-
-const BADGE_STYLES = {
-  warning: 'bg-amber-50 text-amber-700 border border-amber-200',
-  success: 'bg-green-50 text-green-700 border border-green-200',
-  default: 'bg-primary/10 text-primary border border-primary/20',
+const SEVERITY_COLORS: Record<string, string> = {
+  LOW:      'bg-gray-100 text-gray-700',
+  MEDIUM:   'bg-blue-100 text-blue-700',
+  HIGH:     'bg-orange-100 text-orange-800',
+  CRITICAL: 'bg-red-100 text-red-700',
 };
 
 export default function AdminDashboardPage() {
-  const user = useAuthStore((s) => s.user);
-  const navigate = useNavigate();
+  const user       = useAuthStore((s) => s.user);
+  const navigate   = useNavigate();
+
+  const { data: analytics, isLoading: analyticsLoading } = useHospitalAnalytics();
+  const { data: pending }  = usePendingVerifications();
+  const { data: auditData } = useAuditLogs({ limit: 5 });
+
+  const pendingCount = pending?.length ?? 0;
+  const recentLogs   = auditData?.logs?.slice(0, 5) ?? [];
+
+  if (analyticsLoading) {
+    return (
+      <div className="flex items-center justify-center h-64" data-testid="admin-loading">
+        <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const stats = [
+    {
+      label: 'Total Patients',
+      value: analytics?.totalPatients.toLocaleString() ?? '—',
+      icon:  Users,
+      desc:  'Treated at your hospital',
+    },
+    {
+      label: 'Records This Month',
+      value: analytics?.recordsUploadedThisMonth.toLocaleString() ?? '—',
+      icon:  FileText,
+      desc:  'Uploads in current month',
+    },
+    {
+      label: 'Prescriptions',
+      value: analytics?.prescriptionsIssuedThisMonth.toLocaleString() ?? '—',
+      icon:  Activity,
+      desc:  'Issued this month',
+    },
+    {
+      label: 'Pending Consents',
+      value: analytics?.pendingConsents.toLocaleString() ?? '—',
+      icon:  Clock,
+      desc:  'Awaiting patient response',
+    },
+    {
+      label: 'Emergency Overrides',
+      value: analytics?.emergencyOverridesThisMonth.toLocaleString() ?? '—',
+      icon:  Zap,
+      desc:  'This month — review required',
+    },
+    {
+      label: 'AI Reports',
+      value: analytics?.aiReportsThisMonth.toLocaleString() ?? '—',
+      icon:  Brain,
+      desc:  'Generated this month',
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -101,29 +104,29 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* ── Alert: pending verifications ── */}
-      <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-        <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
-        <div>
-          <p className="text-sm font-semibold text-amber-800">
-            Staff verifications require your attention
-          </p>
-          <p className="text-xs text-amber-600 mt-0.5">
-            New doctors or staff who registered under your hospital are waiting for credential review. Go to{' '}
-            <strong>Staff Management → Pending</strong> tab.
-          </p>
-        </div>
-      </div>
+      {/* ── Pending verifications alert ── */}
+      {pendingCount > 0 && (
+        <button
+          data-testid="pending-alert"
+          onClick={() => navigate('/admin/staff')}
+          className="w-full flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left hover:bg-amber-100 transition-colors"
+        >
+          <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">
+              {pendingCount} staff member{pendingCount !== 1 ? 's' : ''} awaiting verification
+            </p>
+            <p className="text-xs text-amber-600 mt-0.5">
+              Click to review → Staff Management → Pending tab
+            </p>
+          </div>
+        </button>
+      )}
 
-      {/* ── Stats ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Doctors',        value: '—', icon: Users,         desc: 'Verified & active' },
-          { label: 'Active Staff',          value: '—', icon: UserCog,       desc: 'In your hospital' },
-          { label: 'Audit Events (24h)',    value: '—', icon: ScrollText,    desc: 'Logins, access, changes' },
-          { label: 'Pending Verifications', value: '—', icon: AlertTriangle, desc: 'Awaiting review' },
-        ].map(({ label, value, icon: Icon, desc }) => (
-          <div key={label} className="rounded-xl border bg-card px-4 py-4">
+      {/* ── KPI stats ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        {stats.map(({ label, value, icon: Icon, desc }) => (
+          <div key={label} className="rounded-xl border bg-card px-4 py-4" data-testid="stat-card">
             <div className="flex items-center gap-2 mb-1">
               <Icon className="w-4 h-4 text-primary" />
               <span className="text-xs text-muted-foreground">{label}</span>
@@ -134,52 +137,97 @@ export default function AdminDashboardPage() {
         ))}
       </div>
 
-      {/* ── Emergency override review notice ── */}
-      <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
-        <CheckCircle2 className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
-        <div>
-          <p className="text-sm font-semibold text-blue-800">
-            Emergency override logs must be reviewed within 48 hours
-          </p>
-          <p className="text-xs text-blue-600 mt-0.5">
-            When a doctor in your hospital uses an emergency override, you must review and acknowledge it. Check{' '}
-            <strong>Audit Logs → EMERGENCY_OVERRIDE</strong>.
-          </p>
+      {/* ── Records per day trend ── */}
+      {analytics?.trends.recordsPerDay && analytics.trends.recordsPerDay.length > 0 && (
+        <div className="rounded-xl border bg-card px-4 py-4">
+          <h2 className="text-sm font-semibold text-foreground mb-3">Records uploaded — last 30 days</h2>
+          <div className="flex items-end gap-1 h-16">
+            {analytics.trends.recordsPerDay.slice(-30).map(({ date, count }) => {
+              const max = Math.max(...analytics.trends.recordsPerDay.map((d) => d.count), 1);
+              const pct = Math.max((count / max) * 100, 4);
+              return (
+                <div
+                  key={date}
+                  title={`${date}: ${count}`}
+                  style={{ height: `${pct}%` }}
+                  className="flex-1 rounded-sm bg-primary/60 hover:bg-primary transition-colors min-h-[3px]"
+                />
+              );
+            })}
+          </div>
         </div>
+      )}
+
+      {/* ── Recent audit logs ── */}
+      <div className="rounded-xl border bg-card overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b">
+          <h2 className="text-sm font-semibold text-foreground">Recent audit activity</h2>
+          <button
+            onClick={() => navigate('/admin/audit')}
+            className="text-xs text-primary hover:underline"
+          >
+            View all →
+          </button>
+        </div>
+        {recentLogs.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-6">No recent audit entries</p>
+        ) : (
+          <table className="w-full text-xs" data-testid="recent-audit-table">
+            <thead>
+              <tr className="text-muted-foreground border-b bg-muted/30">
+                <th className="text-left px-4 py-2 font-medium">Time</th>
+                <th className="text-left px-4 py-2 font-medium">Action</th>
+                <th className="text-left px-4 py-2 font-medium">Actor</th>
+                <th className="text-left px-4 py-2 font-medium">Severity</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentLogs.map((log) => (
+                <tr
+                  key={log.id}
+                  data-testid="audit-row"
+                  className="border-b last:border-0 hover:bg-muted/20 transition-colors"
+                >
+                  <td className="px-4 py-2 text-muted-foreground">
+                    {new Date(log.createdAt).toLocaleTimeString()}
+                  </td>
+                  <td className="px-4 py-2 font-mono">{log.action}</td>
+                  <td className="px-4 py-2 text-muted-foreground truncate max-w-[120px]">{log.actorId}</td>
+                  <td className="px-4 py-2">
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${SEVERITY_COLORS[log.severity] ?? ''}`}>
+                      {log.severity}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
-      {/* ── Quick actions ── */}
-      <div>
-        <h2 className="text-base font-semibold text-foreground mb-3">Administration</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {ACTIONS.map(({ label, description, icon: Icon, href, badge, badgeVariant = 'default' }) => (
-            <button
-              key={label}
-              onClick={() => navigate(href)}
-              className="text-left rounded-xl border border-border bg-card p-5 transition-all hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 active:translate-y-0 group"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
-                  <Icon className="w-5 h-5 text-primary" />
-                </div>
-                {badge && (
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${BADGE_STYLES[badgeVariant]}`}>
-                    {badge}
-                  </span>
-                )}
-              </div>
-              <p className="text-sm font-semibold text-foreground">{label}</p>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{description}</p>
-            </button>
-          ))}
-        </div>
+      {/* ── Quick nav ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Staff',     icon: UserCog,    href: '/admin/staff' },
+          { label: 'Audit',     icon: ScrollText, href: '/admin/audit' },
+          { label: 'Analytics', icon: BarChart2,  href: '/admin/analytics' },
+          { label: 'Hospital',  icon: Hospital,   href: '/admin/hospital' },
+          { label: 'Settings',  icon: Settings,   href: '/admin/settings' },
+        ].map(({ label, icon: Icon, href }) => (
+          <button
+            key={label}
+            onClick={() => navigate(href)}
+            className="flex items-center gap-2 rounded-xl border bg-card px-3 py-3 text-sm font-medium text-foreground hover:bg-muted/40 transition-colors"
+          >
+            <Icon className="w-4 h-4 text-primary" />
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* ── Scope note ── */}
       <p className="text-xs text-muted-foreground/60 text-center pb-2">
         You manage <strong>your hospital only</strong>. Platform-level administration is handled by the UHID Super Admin.
       </p>
-
     </div>
   );
 }
