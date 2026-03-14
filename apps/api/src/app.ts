@@ -12,6 +12,7 @@ import consentRouter from '@/routes/consent.routes';
 import clinicalRouter from '@/routes/clinical.routes';
 import aiRouter from '@/routes/ai.routes';
 import qrRouter from '@/routes/qr.routes';
+import insuranceRouter from '@/routes/insurance.routes';
 import logger from '@/lib/logger';
 
 export function createApp(): Application {
@@ -77,6 +78,7 @@ export function createApp(): Application {
   app.use('/api/v1/clinical', clinicalRouter);   // Phase 4 — doctor portal & pharma-check
   app.use('/api/v1/ai', aiRouter);               // Phase 5 — AI features
   app.use('/api/v1/qr', qrRouter);               // Phase 6 — QR & Emergency access
+  app.use('/api/v1/insurance', insuranceRouter);  // Phase 7 — Insurance portal
   // app.use('/api/patients', authenticate, patientRouter);
   // app.use('/api/doctors', authenticate, doctorRouter);
   // app.use('/api/records', authenticate, recordRouter);

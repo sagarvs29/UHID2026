@@ -4,6 +4,7 @@ import type { ActiveConsent, PendingConsent, ConsentHistoryResponse } from '@/ty
 import type { PatientProfile, ClinicalNote, Prescription, PharmaCheckResult } from '@/types/clinical';
 import type { DecodeResponse, ClinicalSummaryResponse } from '@/types/ai';
 import type { PublicEmergencyData, QrScanLog, GeneratedQr, InvalidateResult, SosResult } from '@/types/qr';
+import type { ClaimSummary, ClaimDetail, SubmitClaimResponse } from '@/types/insurance';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 export const MOCK_UHID = 'UHID-AB12-CD34-5678';
@@ -374,6 +375,61 @@ export const mockSosResult: SosResult = {
   notifiedHospitals:      3,
 };
 
+// ─── Insurance fixtures ────────────────────────────────────────────────────────
+export const MOCK_CLAIM_ID     = 'claim_test_001';
+export const MOCK_CLAIM_NUMBER = 'CLM-2026-00847';
+
+export const mockClaimSummary: ClaimSummary = {
+  id:                  MOCK_CLAIM_ID,
+  claimNumber:         MOCK_CLAIM_NUMBER,
+  patientUhid:         MOCK_UHID,
+  patientName:         'Test Patient',
+  claimType:           'HOSPITALIZATION',
+  status:              'SUBMITTED',
+  claimedAmount:       250000,
+  approvedAmount:      null,
+  fraudScore:          12,
+  riskLevel:           'LOW',
+  createdAt:           '2026-01-20T10:00:00.000Z',
+};
+
+export const mockClaimDetail: ClaimDetail = {
+  id:                  MOCK_CLAIM_ID,
+  claimNumber:         MOCK_CLAIM_NUMBER,
+  patientUhid:         MOCK_UHID,
+  patientName:         'Test Patient',
+  patientId:           'pat_001',
+  insuranceProviderId: 'ins_001',
+  policyNumber:        'POL-12345',
+  claimType:           'HOSPITALIZATION',
+  status:              'SUBMITTED',
+  diagnosis:           'Pneumonia',
+  icd10Code:           'J18.9',
+  admissionDate:       '2026-01-10T00:00:00.000Z',
+  dischargeDate:       '2026-01-15T00:00:00.000Z',
+  hospitalName:        'Apollo Hospital',
+  claimedAmount:       250000,
+  approvedAmount:      null,
+  currency:            'INR',
+  fraudScore:          12,
+  fraudFlags:          [],
+  riskLevel:           'LOW',
+  notes:               null,
+  settlementDate:      null,
+  updatedAt:           '2026-01-20T10:00:00.000Z',
+  createdAt:           '2026-01-20T10:00:00.000Z',
+  documents:           [],
+  auditLogs:           [],
+};
+
+export const mockSubmitResult: SubmitClaimResponse = {
+  claimId:     MOCK_CLAIM_ID,
+  claimNumber: MOCK_CLAIM_NUMBER,
+  status:      'SUBMITTED',
+  fraudScore:  12,
+  riskLevel:   'LOW',
+};
+
 // ─── Handlers ─────────────────────────────────────────────────────────────────
 export const handlers = [
   // POST /api/auth/refresh — needed when any 401 triggers the axios interceptor's token refresh
@@ -654,6 +710,79 @@ export const handlers = [
         expiresAt:     new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
         auditLogId:    'audit_override_001',
       },
+    });
+  }),
+
+  // ─── Insurance handlers ────────────────────────────────────────────────────
+
+  // GET /api/v1/insurance/claims
+  http.get('/api/v1/insurance/claims', () => {
+    return HttpResponse.json({
+      success: true,
+      claims: [mockClaimSummary],
+      pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+    });
+  }),
+
+  // GET /api/v1/insurance/claims/:id
+  http.get('/api/v1/insurance/claims/:id', ({ params }) => {
+    if (params.id === MOCK_CLAIM_ID) {
+      return HttpResponse.json({ success: true, data: mockClaimDetail });
+    }
+    return HttpResponse.json({ success: false, error: 'Not found' }, { status: 404 });
+  }),
+
+  // POST /api/v1/insurance/claims
+  http.post('/api/v1/insurance/claims', async () => {
+    return HttpResponse.json({ success: true, data: mockSubmitResult }, { status: 201 });
+  }),
+
+  // POST /api/v1/insurance/claims/:id/request-access
+  http.post('/api/v1/insurance/claims/:id/request-access', async () => {
+    return HttpResponse.json(
+      {
+        success: true,
+        data: {
+          consentId: 'con_ins_001',
+          status: 'PENDING',
+          message: 'Access request sent to patient for approval',
+        },
+      },
+      { status: 201 }
+    );
+  }),
+
+  // GET /api/v1/insurance/claims/:id/records
+  http.get('/api/v1/insurance/claims/:id/records', () => {
+    return HttpResponse.json(
+      { success: false, error: 'No active consent', code: 'NO_CONSENT' },
+      { status: 403 }
+    );
+  }),
+
+  // POST /api/v1/insurance/verify-record
+  http.post('/api/v1/insurance/verify-record', async () => {
+    return HttpResponse.json({
+      success: true,
+      data: {
+        recordId:      MOCK_RECORD_ID,
+        originalHash:  'abc123def456abc123def456abc123def456abc123def456abc123def456abc1',
+        submittedHash: 'abc123def456abc123def456abc123def456abc123def456abc123def456abc1',
+        isAuthentic:   true,
+        verifiedAt:    new Date().toISOString(),
+        recordType:    'LAB_REPORT',
+        uploadedAt:    '2026-01-16T10:00:00.000Z',
+        uploadedBy:    'Staff',
+      },
+    });
+  }),
+
+  // PATCH /api/v1/insurance/claims/:id/decision
+  http.patch('/api/v1/insurance/claims/:id/decision', async ({ request }) => {
+    const body = await request.json() as { status: string };
+    return HttpResponse.json({
+      success: true,
+      data: { ...mockClaimDetail, status: body.status },
     });
   }),
 ];

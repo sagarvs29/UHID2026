@@ -38,6 +38,15 @@ export const DOCTOR_USER: AuthUser = {
   isPhoneVerified: false,
 };
 
+export const INSURANCE_USER: AuthUser = {
+  userId: 'user_insurance_001',
+  role: 'INSURANCE_PROVIDER',
+  name: 'Test Insurance Provider',
+  email: 'insurance@test.internal',
+  isEmailVerified: true,
+  isPhoneVerified: false,
+};
+
 // ─── Auth store helpers ────────────────────────────────────────────────────────
 export function setMockUser(user: AuthUser) {
   useAuthStore.getState().setAuth(user, 'mock-access-token', 'mock-refresh-token');
