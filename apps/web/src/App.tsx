@@ -32,6 +32,12 @@ import StaffSearchPatientPage from '@/pages/staff/SearchPatientPage';
 import PatientConsentPage from '@/pages/patient/ConsentPage';
 import DoctorConsentPage from '@/pages/doctor/ConsentPage';
 
+// Pages - Phase 4: Clinical portal
+import PatientLookupPage from '@/pages/doctor/PatientLookupPage';
+import DoctorPatientDashboardPage from '@/pages/doctor/PatientDashboardPage';
+import NewPrescriptionPage from '@/pages/doctor/NewPrescriptionPage';
+import ClinicalNotesPage from '@/pages/doctor/ClinicalNotesPage';
+
 const NotFoundPage = () => (
   <div className="flex min-h-screen items-center justify-center bg-background">
     <div className="text-center">
@@ -114,6 +120,10 @@ export default function App() {
           }
         >
           <Route path="dashboard" element={<DoctorDashboardPage />} />
+          <Route path="patient-lookup"              element={<PatientLookupPage />} />
+          <Route path="patient/:uhid"               element={<DoctorPatientDashboardPage />} />
+          <Route path="patient/:uhid/prescribe"     element={<NewPrescriptionPage />} />
+          <Route path="patient/:uhid/notes"         element={<ClinicalNotesPage />} />
           <Route path="patients"  element={<ComingSoonPage />} />
           <Route path="consents"  element={<DoctorConsentPage />} />
           <Route path="records"   element={<DoctorRecordsPage />} />

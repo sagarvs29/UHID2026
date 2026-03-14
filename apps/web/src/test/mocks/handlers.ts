@@ -1,9 +1,10 @@
 import { http, HttpResponse } from 'msw';
 import type { MedicalRecord, MedicalRecordSummary, RecordsListResponse, DownloadUrlResponse } from '@/types/records';
 import type { ActiveConsent, PendingConsent, ConsentHistoryResponse } from '@/types/consent';
+import type { PatientProfile, ClinicalNote, Prescription, PharmaCheckResult } from '@/types/clinical';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
-export const MOCK_UHID = 'UH-000001';
+export const MOCK_UHID = 'UHID-AB12-CD34-5678';
 export const MOCK_RECORD_ID = 'rec_test_001';
 
 export const mockRecordSummary: MedicalRecordSummary = {
@@ -128,6 +129,90 @@ export const mockApproveResult = {
   grantedTo: 'Dr. Suresh Menon',
 };
 
+// ─── Clinical fixtures ────────────────────────────────────────────────────────
+export const MOCK_PRESCRIPTION_ID = 'rx_test_001';
+export const MOCK_NOTE_ID         = 'note_test_001';
+
+export const mockPatientProfile: PatientProfile = {
+  id:               'pat_test_001',
+  uhid:             MOCK_UHID,
+  firstName:        'Rohan',
+  lastName:         'Mehta',
+  dateOfBirth:      '1990-06-15T00:00:00.000Z',
+  gender:           'MALE',
+  bloodGroup:       'O+',
+  allergies:        ['penicillin'],
+  emergencyContact: null,
+  createdAt:        '2025-01-01T00:00:00.000Z',
+  activeScopes:     ['CLINICAL_NOTES', 'PRESCRIPTION'],
+};
+
+export const mockClinicalNote: ClinicalNote = {
+  id:                  MOCK_NOTE_ID,
+  patientId:           'pat_test_001',
+  doctorId:            'doc_test_001',
+  chiefComplaint:      'Persistent dry cough for 5 days',
+  symptoms:            ['cough', 'mild fever', 'fatigue'],
+  icd10Code:           'J18.9',
+  icd10Description:    'Pneumonia, unspecified organism',
+  examinationFindings: 'Reduced breath sounds at right base',
+  vitalSigns:          { bp: '118/76', pulse: 88, temperature: 38.2, spo2: 97 },
+  diagnosis:           'Community-acquired pneumonia',
+  treatmentPlan:       'Oral antibiotics + rest + follow-up in 5 days',
+  visibility:          'PATIENT_VISIBLE',
+  createdAt:           '2026-01-20T09:00:00.000Z',
+  updatedAt:           '2026-01-20T09:00:00.000Z',
+  doctor: { firstName: 'Priya', lastName: 'Sharma', specialization: 'Internal Medicine' },
+};
+
+export const mockPrescription: Prescription = {
+  id:           MOCK_PRESCRIPTION_ID,
+  patientId:    'pat_test_001',
+  doctorId:     'doc_test_001',
+  hospitalId:   'hosp_01',
+  diagnosis:    'Community-acquired pneumonia',
+  notes:        null,
+  followUpDate: null,
+  validUntil:   null,
+  createdAt:    '2026-01-20T09:05:00.000Z',
+  items: [
+    {
+      id:             'item_001',
+      prescriptionId: MOCK_PRESCRIPTION_ID,
+      drugName:       'Amoxicillin',
+      dosage:         '500mg',
+      form:           'CAPSULE',
+      frequency:      'TDS',
+      duration:       '7 days',
+      route:          'ORAL',
+      instructions:   'Take after food',
+      quantity:       21,
+    },
+  ],
+  doctor: { firstName: 'Priya', lastName: 'Sharma', specialization: 'Internal Medicine' },
+};
+
+export const mockPharmaCheckClean: PharmaCheckResult = {
+  passed: true,
+  issues: [],
+};
+
+export const mockPharmaCheckWithIssue: PharmaCheckResult = {
+  passed: false,
+  issues: [
+    {
+      type:             'DRUG_INTERACTION',
+      severity:         'HIGH',
+      drugs:            ['warfarin', 'aspirin'],
+      mechanism:        'Both inhibit platelet function. Aspirin also displaces warfarin from protein binding.',
+      clinicalEffect:   'Risk of major bleeding including GI and intracranial haemorrhage.',
+      alternatives:     { forDrugB: ['acetaminophen'] },
+      requiresOverride: true,
+      interactionKey:   'DDI:warfarin-aspirin',
+    },
+  ],
+};
+
 // ─── Handlers ─────────────────────────────────────────────────────────────────
 export const handlers = [
   // POST /api/auth/refresh — needed when any 401 triggers the axios interceptor's token refresh
@@ -244,5 +329,77 @@ export const handlers = [
       });
     }
     return HttpResponse.json({ success: false, error: 'Consent not found' }, { status: 404 });
+  }),
+
+  // ─── Clinical handlers ────────────────────────────────────────────────────
+
+  // GET /api/v1/clinical/patient/:uhid
+  http.get('/api/v1/clinical/patient/:uhid', ({ params }) => {
+    const { uhid } = params as { uhid: string };
+    if (uhid === MOCK_UHID) {
+      return HttpResponse.json({ success: true, data: mockPatientProfile });
+    }
+    return HttpResponse.json({ success: false, error: 'Patient not found' }, { status: 404 });
+  }),
+
+  // GET /api/v1/clinical/notes/single/:id
+  http.get('/api/v1/clinical/notes/single/:id', ({ params }) => {
+    const { id } = params as { id: string };
+    if (id === MOCK_NOTE_ID) {
+      return HttpResponse.json({ success: true, data: mockClinicalNote });
+    }
+    return HttpResponse.json({ success: false, error: 'Note not found' }, { status: 404 });
+  }),
+
+  // GET /api/v1/clinical/notes/:patientUhid
+  http.get('/api/v1/clinical/notes/:patientUhid', ({ params }) => {
+    const { patientUhid } = params as { patientUhid: string };
+    if (patientUhid === MOCK_UHID) {
+      return HttpResponse.json({ success: true, data: [mockClinicalNote] });
+    }
+    return HttpResponse.json({ success: true, data: [] });
+  }),
+
+  // POST /api/v1/clinical/notes
+  http.post('/api/v1/clinical/notes', async () => {
+    return HttpResponse.json(
+      { success: true, message: 'Clinical note created successfully', data: mockClinicalNote },
+      { status: 201 }
+    );
+  }),
+
+  // GET /api/v1/clinical/prescriptions/single/:id
+  http.get('/api/v1/clinical/prescriptions/single/:id', ({ params }) => {
+    const { id } = params as { id: string };
+    if (id === MOCK_PRESCRIPTION_ID) {
+      return HttpResponse.json({ success: true, data: mockPrescription });
+    }
+    return HttpResponse.json({ success: false, error: 'Prescription not found' }, { status: 404 });
+  }),
+
+  // GET /api/v1/clinical/prescriptions/:patientUhid
+  http.get('/api/v1/clinical/prescriptions/:patientUhid', ({ params }) => {
+    const { patientUhid } = params as { patientUhid: string };
+    if (patientUhid === MOCK_UHID) {
+      return HttpResponse.json({ success: true, data: [mockPrescription] });
+    }
+    return HttpResponse.json({ success: true, data: [] });
+  }),
+
+  // POST /api/v1/clinical/prescriptions
+  http.post('/api/v1/clinical/prescriptions', async () => {
+    return HttpResponse.json(
+      {
+        success: true,
+        message: 'Prescription created successfully',
+        data: { prescription: mockPrescription, pharmaCheck: mockPharmaCheckClean },
+      },
+      { status: 201 }
+    );
+  }),
+
+  // POST /api/v1/clinical/pharma-check
+  http.post('/api/v1/clinical/pharma-check', async () => {
+    return HttpResponse.json({ success: true, data: mockPharmaCheckClean });
   }),
 ];

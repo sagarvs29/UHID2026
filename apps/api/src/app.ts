@@ -9,6 +9,7 @@ import authRouter from '@/routes/auth.routes';
 import hospitalsRouter from '@/routes/hospitals.routes';
 import recordsRouter from '@/routes/records.routes';
 import consentRouter from '@/routes/consent.routes';
+import clinicalRouter from '@/routes/clinical.routes';
 import logger from '@/lib/logger';
 
 export function createApp(): Application {
@@ -71,7 +72,7 @@ export function createApp(): Application {
   app.use('/api/v1/hospitals', hospitalsRouter); // Public — registration dropdown
   app.use('/api/v1/records', recordsRouter);     // Phase 2 — medical records
   app.use('/api/v1/consents', consentRouter);    // Phase 3 — consent management
-  // Phase 4+ routes will be added here:
+  app.use('/api/v1/clinical', clinicalRouter);   // Phase 4 — doctor portal & pharma-check
   // app.use('/api/patients', authenticate, patientRouter);
   // app.use('/api/doctors', authenticate, doctorRouter);
   // app.use('/api/records', authenticate, recordRouter);
