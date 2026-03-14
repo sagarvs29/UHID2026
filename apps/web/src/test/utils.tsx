@@ -51,7 +51,7 @@ export function clearMockUser() {
 export function createTestQueryClient() {
   return new QueryClient({
     defaultOptions: {
-      queries: { retry: false, gcTime: 0 },
+      queries: { retry: false, gcTime: 0, refetchInterval: false },
       mutations: { retry: false },
     },
   });

@@ -28,6 +28,10 @@ import DoctorRecordsPage from '@/pages/doctor/RecordsPage';
 import StaffUploadRecordPage from '@/pages/staff/UploadRecordPage';
 import StaffSearchPatientPage from '@/pages/staff/SearchPatientPage';
 
+// Pages - Phase 3: Consent
+import PatientConsentPage from '@/pages/patient/ConsentPage';
+import DoctorConsentPage from '@/pages/doctor/ConsentPage';
+
 const NotFoundPage = () => (
   <div className="flex min-h-screen items-center justify-center bg-background">
     <div className="text-center">
@@ -95,7 +99,7 @@ export default function App() {
         >
           <Route path="dashboard" element={<PatientDashboardPage />} />
           <Route path="records"   element={<PatientRecordsPage />} />
-          <Route path="consent"   element={<ComingSoonPage />} />
+          <Route path="consent"   element={<PatientConsentPage />} />
           <Route path="qr"        element={<ComingSoonPage />} />
           <Route path="profile"   element={<ComingSoonPage />} />
         </Route>
@@ -111,7 +115,7 @@ export default function App() {
         >
           <Route path="dashboard" element={<DoctorDashboardPage />} />
           <Route path="patients"  element={<ComingSoonPage />} />
-          <Route path="consents"  element={<ComingSoonPage />} />
+          <Route path="consents"  element={<DoctorConsentPage />} />
           <Route path="records"   element={<DoctorRecordsPage />} />
           <Route path="profile"   element={<ComingSoonPage />} />
         </Route>

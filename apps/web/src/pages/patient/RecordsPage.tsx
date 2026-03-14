@@ -109,7 +109,7 @@ function RecordDetailModal({
                     <Sparkles className="w-3.5 h-3.5" />
                     <span className="text-xs font-semibold">AI Summary</span>
                   </div>
-                  <p className="text-xs text-violet-800 leading-relaxed">{record.aiSummary}</p>
+                  <p className="text-xs text-violet-800 leading-relaxed">{record.aiSummary.summaryText}</p>
                 </div>
               )}
 
