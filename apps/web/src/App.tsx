@@ -18,6 +18,7 @@ import PatientDashboardPage from '@/pages/patient/DashboardPage';
 import DoctorDashboardPage from '@/pages/doctor/DashboardPage';
 import StaffDashboardPage from '@/pages/staff/DashboardPage';
 import AdminDashboardPage from '@/pages/admin/DashboardPage';
+import SuperAdminDashboardPage from '@/pages/superadmin/DashboardPage';
 import InsuranceDashboardPage from '@/pages/insurance/DashboardPage';
 import ComingSoonPage from '@/pages/ComingSoonPage';
 
@@ -30,6 +31,16 @@ const NotFoundPage = () => (
   </div>
 );
 
+// Single source of truth for role → home route
+const ROLE_HOME: Record<Role, string> = {
+  PATIENT:            '/patient/dashboard',
+  DOCTOR:             '/doctor/dashboard',
+  HOSPITAL_STAFF:     '/staff/dashboard',
+  HOSPITAL_ADMIN:     '/admin/dashboard',
+  INSURANCE_PROVIDER: '/insurance/dashboard',
+  SUPER_ADMIN:        '/superadmin/dashboard',
+};
+
 function ProtectedRoute({
   children,
   roles,
@@ -40,15 +51,6 @@ function ProtectedRoute({
   const { isAuthenticated, user } = useAuthStore();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (roles && user && !roles.includes(user.role)) {
-    // Redirect to their correct dashboard
-    const ROLE_HOME: Record<Role, string> = {
-      PATIENT: '/patient/dashboard',
-      DOCTOR: '/doctor/dashboard',
-      HOSPITAL_STAFF: '/staff/dashboard',
-      HOSPITAL_ADMIN: '/admin/dashboard',
-      INSURANCE_PROVIDER: '/insurance/dashboard',
-      SUPER_ADMIN: '/admin/dashboard',
-    };
     return <Navigate to={ROLE_HOME[user.role]} replace />;
   }
   return <>{children}</>;
@@ -58,14 +60,6 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
   if (isAuthenticated && user) {
-    const ROLE_HOME: Record<Role, string> = {
-      PATIENT: '/patient/dashboard',
-      DOCTOR: '/doctor/dashboard',
-      HOSPITAL_STAFF: '/staff/dashboard',
-      HOSPITAL_ADMIN: '/admin/dashboard',
-      INSURANCE_PROVIDER: '/insurance/dashboard',
-      SUPER_ADMIN: '/admin/dashboard',
-    };
     return <Navigate to={ROLE_HOME[user.role]} replace />;
   }
   return <>{children}</>;
@@ -132,11 +126,11 @@ export default function App() {
           <Route path="profile"   element={<ComingSoonPage />} />
         </Route>
 
-        {/* ─── Admin routes ─── */}
+        {/* ─── Hospital Admin routes ─── */}
         <Route
           path="/admin"
           element={
-            <ProtectedRoute roles={['HOSPITAL_ADMIN', 'SUPER_ADMIN']}>
+            <ProtectedRoute roles={['HOSPITAL_ADMIN']}>
               <DashboardLayout />
             </ProtectedRoute>
           }
@@ -146,6 +140,26 @@ export default function App() {
           <Route path="doctors"   element={<ComingSoonPage />} />
           <Route path="audit"     element={<ComingSoonPage />} />
           <Route path="analytics" element={<ComingSoonPage />} />
+          <Route path="hospital"  element={<ComingSoonPage />} />
+          <Route path="settings"  element={<ComingSoonPage />} />
+        </Route>
+
+        {/* ─── Super Admin routes ─── */}
+        <Route
+          path="/superadmin"
+          element={
+            <ProtectedRoute roles={['SUPER_ADMIN']}>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="dashboard"  element={<SuperAdminDashboardPage />} />
+          <Route path="hospitals"  element={<ComingSoonPage />} />
+          <Route path="users"      element={<ComingSoonPage />} />
+          <Route path="insurance"  element={<ComingSoonPage />} />
+          <Route path="audit"      element={<ComingSoonPage />} />
+          <Route path="analytics"  element={<ComingSoonPage />} />
+          <Route path="settings"   element={<ComingSoonPage />} />
         </Route>
 
         {/* ─── Insurance routes ─── */}

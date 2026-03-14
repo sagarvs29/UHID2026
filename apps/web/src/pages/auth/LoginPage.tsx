@@ -15,12 +15,12 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 const ROLE_REDIRECT: Record<string, string> = {
-  PATIENT: '/patient/dashboard',
-  DOCTOR: '/doctor/dashboard',
-  HOSPITAL_STAFF: '/staff/dashboard',
-  HOSPITAL_ADMIN: '/admin/dashboard',
+  PATIENT:            '/patient/dashboard',
+  DOCTOR:             '/doctor/dashboard',
+  HOSPITAL_STAFF:     '/staff/dashboard',
+  HOSPITAL_ADMIN:     '/admin/dashboard',
   INSURANCE_PROVIDER: '/insurance/dashboard',
-  SUPER_ADMIN: '/admin/dashboard',
+  SUPER_ADMIN:        '/superadmin/dashboard',
 };
 
 export default function LoginPage() {

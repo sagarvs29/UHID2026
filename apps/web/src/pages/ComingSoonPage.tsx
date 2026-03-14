@@ -125,12 +125,12 @@ const ROUTE_PHASE_MAP: Record<string, PhaseInfo> = {
     status: 'planned',
   },
 
-  // ── Admin / Hospital Management (Phase 8) ──────────────────────────
+  // ── Admin — Hospital Management (Phase 8) ─────────────────────────
   '/admin/staff': {
     phase: 'Phase 8',
     title: 'Staff Management',
-    description: 'Manage hospital staff accounts and permissions.',
-    features: ['Add / remove staff', 'Set role permissions', 'View activity logs', 'Deactivate accounts'],
+    description: 'Manage hospital staff accounts, pending verifications, and permissions.',
+    features: ['Pending verification queue', 'Verify / reject credentials', 'Deactivate accounts', 'View staff activity log'],
     status: 'planned',
   },
   '/admin/doctors': {
@@ -143,15 +143,73 @@ const ROUTE_PHASE_MAP: Record<string, PhaseInfo> = {
   '/admin/audit': {
     phase: 'Phase 8',
     title: 'Audit Logs',
-    description: 'Full audit trail of all system events and data access.',
-    features: ['Real-time event log', 'Filter by user / action', 'Export audit reports', 'Compliance dashboards'],
+    description: 'Full audit trail of all system events and data access within your hospital.',
+    features: ['Real-time event log', 'Filter by user / action / severity', 'Export CSV reports', 'Emergency override review'],
     status: 'planned',
   },
   '/admin/analytics': {
     phase: 'Phase 8',
-    title: 'Analytics',
+    title: 'Hospital Analytics',
     description: 'Hospital-level operational and clinical analytics.',
     features: ['Record upload trends', 'Consent activity charts', 'Staff performance metrics', 'Department reports'],
+    status: 'planned',
+  },
+  '/admin/hospital': {
+    phase: 'Phase 8',
+    title: 'Hospital Profile',
+    description: 'Update your hospital information, NABH status, and settings.',
+    features: ['Hospital info & address', 'NABH verification status', 'Departments & specializations', 'Contact management'],
+    status: 'planned',
+  },
+  '/admin/settings': {
+    phase: 'Phase 8',
+    title: 'Security Settings',
+    description: 'Manage access policies and permissions for your hospital.',
+    features: ['Access control policies', 'Session management', 'IP allowlist', 'Two-factor enforcement'],
+    status: 'planned',
+  },
+
+  // ── Super Admin — Platform Management (Phase 8) ────────────────────
+  '/superadmin/hospitals': {
+    phase: 'Phase 8',
+    title: 'Hospital Management',
+    description: 'Verify, suspend, or view all registered hospitals on the platform.',
+    features: ['Hospital verification queue', 'Suspend / reactivate hospitals', 'View per-hospital analytics', 'Add hospital manually'],
+    status: 'planned',
+  },
+  '/superadmin/users': {
+    phase: 'Phase 8',
+    title: 'All Users',
+    description: 'Browse and manage all platform users across every role.',
+    features: ['Search by role / hospital', 'View user activity', 'Force deactivate accounts', 'Impersonate (read-only)'],
+    status: 'planned',
+  },
+  '/superadmin/insurance': {
+    phase: 'Phase 8',
+    title: 'Insurance Providers',
+    description: 'Approve or reject insurance provider registrations.',
+    features: ['Pending approval queue', 'Approve / reject providers', 'View claim activity', 'Suspend providers'],
+    status: 'planned',
+  },
+  '/superadmin/audit': {
+    phase: 'Phase 8',
+    title: 'Platform Audit Logs',
+    description: 'Full audit trail across all hospitals, all users, all actions.',
+    features: ['Cross-hospital log viewer', 'Filter by hospital / role', 'Severity-coded events', 'Compliance CSV export'],
+    status: 'planned',
+  },
+  '/superadmin/analytics': {
+    phase: 'Phase 8',
+    title: 'Platform Analytics',
+    description: 'Total users, records, AI cost, SOS events, claims across the platform.',
+    features: ['Total user breakdown by role', 'AI API cost per hospital', 'SOS & emergency trends', 'Claims processed stats'],
+    status: 'planned',
+  },
+  '/superadmin/settings': {
+    phase: 'Phase 8',
+    title: 'Platform Settings',
+    description: 'System configuration, feature flags, and global security policies.',
+    features: ['Feature flag management', 'Global rate limits', 'TOTP enforcement for admins', 'System maintenance mode'],
     status: 'planned',
   },
 
