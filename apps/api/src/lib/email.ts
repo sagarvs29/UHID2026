@@ -333,6 +333,61 @@ export async function sendConsentStatusEmail(
 
 // ─── Staff / Doctor Verification Result Email ─────────────────────────────────
 
+export async function sendHospitalActionEmail(
+  to: string,
+  adminName: string,
+  hospitalName: string,
+  action: 'VERIFY' | 'SUSPEND',
+  notes?: string,
+): Promise<void> {
+  const loginUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5173'}/login`;
+
+  const cfg: Record<string, { subject: string; color: string; icon: string; heading: string; body: string; cta: string }> = {
+    VERIFY: {
+      subject: `UHID — ${hospitalName} has been verified! ✅`,
+      color: '#16A34A',
+      icon: '✅',
+      heading: 'Hospital Verified!',
+      body: `Great news! <strong>${hospitalName}</strong> has been <strong>verified</strong> by the UHID Super Admin. Your hospital is now fully active on the platform.`,
+      cta: `
+        <p style="color: #374151; font-size: 14px;">You can now manage your hospital, approve staff, and access all features.</p>
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${loginUrl}" style="background: #16A34A; color: white; padding: 12px 32px; border-radius: 6px; text-decoration: none; font-weight: bold;">Go to Dashboard</a>
+        </div>`,
+    },
+    SUSPEND: {
+      subject: `UHID — ${hospitalName} has been suspended`,
+      color: '#DC2626',
+      icon: '⚠️',
+      heading: 'Hospital Suspended',
+      body: `<strong>${hospitalName}</strong> has been <strong>suspended</strong> by the UHID Super Admin. Access to platform features has been restricted.`,
+      cta: notes
+        ? `<div style="background: #FEF2F2; border: 1px solid #DC2626; border-radius: 8px; padding: 14px; margin: 16px 0;">
+            <p style="margin: 0; color: #991B1B; font-size: 13px;"><strong>Reason:</strong> ${notes}</p>
+          </div>
+          <p style="color: #6B7280; font-size: 14px;">If you believe this was a mistake, please contact UHID support at <strong>support@uhid.health</strong>.</p>`
+        : `<p style="color: #6B7280; font-size: 14px;">If you believe this was a mistake, please contact UHID support at <strong>support@uhid.health</strong>.</p>`,
+    },
+  };
+
+  const c = cfg[action];
+  await transporter.sendMail({
+    from: `"UHID Health" <${process.env.SMTP_USER}>`,
+    to,
+    subject: c.subject,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto;">
+        <h2 style="color: ${c.color};">${c.icon} ${c.heading}</h2>
+        <p>Hello <strong>${adminName}</strong>,</p>
+        <p>${c.body}</p>
+        ${c.cta}
+        <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 20px 0;" />
+        <p style="color: #9CA3AF; font-size: 12px;">UHID — UniHealth ID Platform</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendStaffVerificationResultEmail(
   to: string,
   staffName: string,

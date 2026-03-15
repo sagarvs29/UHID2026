@@ -8,7 +8,7 @@ import {
   Role,
   Prisma,
 } from '@prisma/client';
-import { sendHospitalAdminCredentialsEmail, sendStaffVerificationResultEmail } from '@/lib/email';
+import { sendHospitalAdminCredentialsEmail, sendStaffVerificationResultEmail, sendHospitalActionEmail } from '@/lib/email';
 import type { AuditLogQuery } from '@/validators/admin.validator';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -712,6 +712,18 @@ export async function hospitalAction(
     targetType: 'Hospital',
     metadata:  { action, notes },
   });
+
+  // ── Notify Hospital Admin via email ──────────────────────────────────────
+  const hospitalAdmin = await prisma.hospitalAdmin.findFirst({
+    where: { hospitalId },
+    include: { user: { select: { email: true } } },
+  });
+  if (hospitalAdmin?.user?.email) {
+    const adminName = [hospitalAdmin.firstName, hospitalAdmin.lastName].filter(Boolean).join(' ') || 'Admin';
+    sendHospitalActionEmail(hospitalAdmin.user.email, adminName, hospital!.name, action, notes).catch((err) =>
+      logger.error('[Email] Hospital action notification failed:', err),
+    );
+  }
 
   return { success: true, hospitalId, action };
 }

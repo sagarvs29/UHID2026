@@ -357,7 +357,7 @@ export async function generateOneTimeQr(
   const token = jwt.sign(
     { uhid: patient!.uhid, jti, tier: 3, isOneTime: true },
     EMERGENCY_SECRET,
-    { expiresIn: `${durationMinutes}m`, jwtid: jti },
+    { expiresIn: `${durationMinutes}m` },
   );
 
   const qrCode = await prisma.qrCode.create({
@@ -443,7 +443,7 @@ export async function invalidateQrs(patientUserId: string, reason: string) {
   jwt.sign(
     { uhid: patient!.uhid, jti, tier: 1, isEmergencyCard: true },
     EMERGENCY_SECRET,
-    { expiresIn: `${ROTATION_HOURS}h`, jwtid: jti },
+    { expiresIn: `${ROTATION_HOURS}h` },
   );
 
   await prisma.qrCode.create({
@@ -649,7 +649,7 @@ export async function ensureEmergencyQr(patientUserId: string): Promise<void> {
   jwt.sign(
     { uhid: patient.uhid, jti, tier: 1, isEmergencyCard: true },
     EMERGENCY_SECRET,
-    { expiresIn: `${ROTATION_HOURS}h`, jwtid: jti },
+    { expiresIn: `${ROTATION_HOURS}h` },
   );
 
   await prisma.qrCode.create({

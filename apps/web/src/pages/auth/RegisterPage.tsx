@@ -248,17 +248,21 @@ function PatientForm({ onBack, onDone, isPending, serverError }: { onBack: () =>
       {serverError && <ErrorBanner message={serverError} />}
       <div className="grid grid-cols-2 gap-3">
         <InputField label="First name" error={errors.firstName?.message}>
-          <input {...register('firstName')} placeholder="Rahul" className={inputCls} />
+          <input {...register('firstName')} maxLength={80} placeholder="Rahul" className={inputCls}
+            onChange={(e) => { e.target.value = e.target.value.replace(/[^a-zA-Z\s'-]/g, ''); register('firstName').onChange(e); }} />
         </InputField>
         <InputField label="Last name" error={errors.lastName?.message}>
-          <input {...register('lastName')} placeholder="Sharma" className={inputCls} />
+          <input {...register('lastName')} maxLength={80} placeholder="Sharma" className={inputCls}
+            onChange={(e) => { e.target.value = e.target.value.replace(/[^a-zA-Z\s'-]/g, ''); register('lastName').onChange(e); }} />
         </InputField>
       </div>
       <InputField label="Email address" error={errors.email?.message}>
-        <input {...register('email')} type="email" autoComplete="email" placeholder="you@gmail.com" className={inputCls} />
+        <input {...register('email')} type="email" autoComplete="email" maxLength={254} placeholder="you@gmail.com" className={inputCls} />
       </InputField>
       <InputField label="Mobile number" error={errors.phone?.message} hint="10-digit Indian mobile">
-        <input {...register('phone')} type="tel" placeholder="9876543210" className={inputCls} />
+        <input {...register('phone')} type="tel" inputMode="numeric" maxLength={10}
+          placeholder="9876543210" className={inputCls}
+          onChange={(e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10); register('phone').onChange(e); }} />
       </InputField>
       <InputField label="Date of birth" error={errors.dateOfBirth?.message}>
         <input {...register('dateOfBirth')} type="date" className={inputCls} />
@@ -308,17 +312,21 @@ function DoctorForm({ onBack, onDone, isPending, serverError }: { onBack: () => 
       {serverError && <ErrorBanner message={serverError} />}
       <div className="grid grid-cols-2 gap-3">
         <InputField label="First name" error={errors.firstName?.message}>
-          <input {...register('firstName')} placeholder="Arjun" className={inputCls} />
+          <input {...register('firstName')} maxLength={80} placeholder="Arjun" className={inputCls}
+            onChange={(e) => { e.target.value = e.target.value.replace(/[^a-zA-Z\s'-]/g, ''); register('firstName').onChange(e); }} />
         </InputField>
         <InputField label="Last name" error={errors.lastName?.message}>
-          <input {...register('lastName')} placeholder="Mehta" className={inputCls} />
+          <input {...register('lastName')} maxLength={80} placeholder="Mehta" className={inputCls}
+            onChange={(e) => { e.target.value = e.target.value.replace(/[^a-zA-Z\s'-]/g, ''); register('lastName').onChange(e); }} />
         </InputField>
       </div>
       <InputField label="Email address" error={errors.email?.message}>
-        <input {...register('email')} type="email" autoComplete="email" placeholder="doctor@gmail.com" className={inputCls} />
+        <input {...register('email')} type="email" autoComplete="email" maxLength={254} placeholder="doctor@gmail.com" className={inputCls} />
       </InputField>
       <InputField label="Mobile number" error={errors.phone?.message} hint="10-digit Indian mobile">
-        <input {...register('phone')} type="tel" placeholder="9876543210" className={inputCls} />
+        <input {...register('phone')} type="tel" inputMode="numeric" maxLength={10}
+          placeholder="9876543210" className={inputCls}
+          onChange={(e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10); register('phone').onChange(e); }} />
       </InputField>
       <InputField label="Hospital" error={errors.hospitalId?.message} hint="Search and select your hospital">
         <input type="text" placeholder="Type to search hospital…" className={inputCls + ' mb-1.5'}
@@ -329,13 +337,13 @@ function DoctorForm({ onBack, onDone, isPending, serverError }: { onBack: () => 
         </select>
       </InputField>
       <InputField label="Specialty" error={errors.specialty?.message}>
-        <input {...register('specialty')} placeholder="e.g. Cardiology, General Medicine" className={inputCls} />
+        <input {...register('specialty')} maxLength={100} placeholder="e.g. Cardiology, General Medicine" className={inputCls} />
       </InputField>
       <InputField label="Medical license number" error={errors.licenseNumber?.message}>
-        <input {...register('licenseNumber')} placeholder="e.g. MH-MED-2018-12345" className={inputCls} />
+        <input {...register('licenseNumber')} maxLength={50} placeholder="e.g. MH-MED-2018-12345" className={inputCls} />
       </InputField>
       <InputField label="Qualifications" error={errors.qualifications?.message} hint="Comma separated — e.g. MBBS, MD Cardiology">
-        <input {...register('qualifications')} placeholder="MBBS, MD Cardiology" className={inputCls} />
+        <input {...register('qualifications')} maxLength={500} placeholder="MBBS, MD Cardiology" className={inputCls} />
       </InputField>
       <div className="grid grid-cols-2 gap-3">
         <InputField label="Experience (years)" error={errors.experienceYears?.message}>
@@ -364,17 +372,21 @@ function StaffForm({ onBack, onDone, isPending, serverError }: { onBack: () => v
       {serverError && <ErrorBanner message={serverError} />}
       <div className="grid grid-cols-2 gap-3">
         <InputField label="First name" error={errors.firstName?.message}>
-          <input {...register('firstName')} placeholder="Priya" className={inputCls} />
+          <input {...register('firstName')} maxLength={80} placeholder="Priya" className={inputCls}
+            onChange={(e) => { e.target.value = e.target.value.replace(/[^a-zA-Z\s'-]/g, ''); register('firstName').onChange(e); }} />
         </InputField>
         <InputField label="Last name" error={errors.lastName?.message}>
-          <input {...register('lastName')} placeholder="Nair" className={inputCls} />
+          <input {...register('lastName')} maxLength={80} placeholder="Nair" className={inputCls}
+            onChange={(e) => { e.target.value = e.target.value.replace(/[^a-zA-Z\s'-]/g, ''); register('lastName').onChange(e); }} />
         </InputField>
       </div>
       <InputField label="Email address" error={errors.email?.message}>
-        <input {...register('email')} type="email" autoComplete="email" placeholder="staff@hospital.com" className={inputCls} />
+        <input {...register('email')} type="email" autoComplete="email" maxLength={254} placeholder="staff@hospital.com" className={inputCls} />
       </InputField>
       <InputField label="Mobile number" error={errors.phone?.message} hint="10-digit Indian mobile">
-        <input {...register('phone')} type="tel" placeholder="9876543210" className={inputCls} />
+        <input {...register('phone')} type="tel" inputMode="numeric" maxLength={10}
+          placeholder="9876543210" className={inputCls}
+          onChange={(e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10); register('phone').onChange(e); }} />
       </InputField>
       <InputField label="Hospital" error={errors.hospitalId?.message}>
         <input type="text" placeholder="Type to search hospital…" className={inputCls + ' mb-1.5'}
@@ -396,7 +408,7 @@ function StaffForm({ onBack, onDone, isPending, serverError }: { onBack: () => v
         </select>
       </InputField>
       <InputField label="Employee ID" error={errors.employeeId?.message} hint="Optional — internal hospital ID">
-        <input {...register('employeeId')} placeholder="EMP-12345" className={inputCls} />
+        <input {...register('employeeId')} placeholder="EMP-12345" maxLength={50} className={inputCls} />
       </InputField>
       <PasswordFields showPass={showPass} setShowPass={setShowPass} showConfirm={showConfirm} setShowConfirm={setShowConfirm} register={register} errors={errors} />
       <SubmitButton isPending={isPending} label="Submit Staff Application" />
@@ -414,23 +426,27 @@ function InsuranceForm({ onBack, onDone, isPending, serverError }: { onBack: () 
       {serverError && <ErrorBanner message={serverError} />}
       <div className="grid grid-cols-2 gap-3">
         <InputField label="First name" error={errors.firstName?.message}>
-          <input {...register('firstName')} placeholder="Suresh" className={inputCls} />
+          <input {...register('firstName')} maxLength={80} placeholder="Suresh" className={inputCls}
+            onChange={(e) => { e.target.value = e.target.value.replace(/[^a-zA-Z\s'-]/g, ''); register('firstName').onChange(e); }} />
         </InputField>
         <InputField label="Last name" error={errors.lastName?.message}>
-          <input {...register('lastName')} placeholder="Agarwal" className={inputCls} />
+          <input {...register('lastName')} maxLength={80} placeholder="Agarwal" className={inputCls}
+            onChange={(e) => { e.target.value = e.target.value.replace(/[^a-zA-Z\s'-]/g, ''); register('lastName').onChange(e); }} />
         </InputField>
       </div>
       <InputField label="Email address" error={errors.email?.message}>
-        <input {...register('email')} type="email" autoComplete="email" placeholder="contact@insurer.com" className={inputCls} />
+        <input {...register('email')} type="email" autoComplete="email" maxLength={254} placeholder="contact@insurer.com" className={inputCls} />
       </InputField>
       <InputField label="Company name" error={errors.companyName?.message}>
-        <input {...register('companyName')} placeholder="HDFC ERGO General Insurance" className={inputCls} />
+        <input {...register('companyName')} maxLength={200} placeholder="HDFC ERGO General Insurance" className={inputCls} />
       </InputField>
       <InputField label="IRDAI license number" error={errors.licenseNumber?.message}>
-        <input {...register('licenseNumber')} placeholder="IRDAI/HLT/12345" className={inputCls} />
+        <input {...register('licenseNumber')} maxLength={50} placeholder="IRDAI/HLT/12345" className={inputCls} />
       </InputField>
       <InputField label="Mobile number" error={errors.phone?.message} hint="10-digit Indian mobile">
-        <input {...register('phone')} type="tel" placeholder="9876543210" className={inputCls} />
+        <input {...register('phone')} type="tel" inputMode="numeric" maxLength={10}
+          placeholder="9876543210" className={inputCls}
+          onChange={(e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10); register('phone').onChange(e); }} />
       </InputField>
       <PasswordFields showPass={showPass} setShowPass={setShowPass} showConfirm={showConfirm} setShowConfirm={setShowConfirm} register={register} errors={errors} />
       <SubmitButton isPending={isPending} label="Submit Application" />
