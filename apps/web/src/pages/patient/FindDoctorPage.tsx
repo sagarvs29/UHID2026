@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Search, MapPin, Star, Video, User2, Phone,
   Loader2, AlertCircle, ChevronLeft, ChevronRight,
-  Calendar, X, Clock, CheckCircle2,
+  Calendar, X, Clock, CheckCircle2, Eye,
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import {
@@ -194,9 +194,11 @@ function SlotPickerModal({
 function DoctorCardItem({
   doctor,
   onBook,
+  onView,
 }: {
   doctor: DoctorCard;
   onBook: (d: DoctorCard) => void;
+  onView: (d: DoctorCard) => void;
 }) {
   return (
     <div className="rounded-2xl border bg-card p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
@@ -252,12 +254,22 @@ function DoctorCardItem({
         )}
       </div>
 
-      <button
-        onClick={() => onBook(doctor)}
-        className="mt-auto w-full rounded-xl bg-primary py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-      >
-        Book Appointment
-      </button>
+      <div className="mt-3 flex gap-2">
+        <button
+          onClick={() => onView(doctor)}
+          title="View details"
+          className="flex-0 inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent"
+        >
+          <Eye className="w-4 h-4" />
+          View
+        </button>
+        <button
+          onClick={() => onBook(doctor)}
+          className="flex-1 rounded-xl bg-primary py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          Book Appointment
+        </button>
+      </div>
     </div>
   );
 }
@@ -269,6 +281,7 @@ export default function FindDoctorPage() {
   const [specialty, setSpecialty] = useState('');
   const [city,      setCity]      = useState('');
   const [bookTarget, setBookTarget] = useState<DoctorCard | null>(null);
+  const [viewTarget, setViewTarget] = useState<DoctorCard | null>(null);
 
   const { data, isLoading, isError } = useDoctorSearch(filters);
 
@@ -362,7 +375,7 @@ export default function FindDoctorPage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {data.doctors.map((d) => (
-                <DoctorCardItem key={d.id} doctor={d} onBook={setBookTarget} />
+                <DoctorCardItem key={d.id} doctor={d} onBook={setBookTarget} onView={setViewTarget} />
               ))}
             </div>
           )}
@@ -395,6 +408,68 @@ export default function FindDoctorPage() {
       {/* Slot Picker Modal */}
       {bookTarget && (
         <SlotPickerModal doctor={bookTarget} onClose={() => setBookTarget(null)} />
+      )}
+
+      {/* Doctor Detail Modal */}
+      {viewTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          onClick={() => setViewTarget(null)}
+        >
+          <div
+            className="w-full max-w-xl rounded-2xl border bg-card shadow-xl overflow-hidden max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b px-5 py-4">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Doctor details</p>
+                <p className="text-xs text-muted-foreground">{viewTarget.name} · {viewTarget.specialty}</p>
+              </div>
+              <button onClick={() => setViewTarget(null)} className="rounded-lg p-1 hover:bg-accent transition-colors">
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 overflow-y-auto">
+              <div className="flex items-start gap-4">
+                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  {viewTarget.photoUrl ? (
+                    <img src={viewTarget.photoUrl} alt={viewTarget.name} className="w-20 h-20 rounded-full object-cover" />
+                  ) : (
+                    <span className="text-2xl font-bold text-primary">{viewTarget.name.charAt(0)}</span>
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">{viewTarget.name}</h3>
+                  <p className="text-sm text-muted-foreground">{viewTarget.specialty} · {viewTarget.hospital}</p>
+                  <p className="text-sm mt-2">Experience: <span className="font-medium">{viewTarget.experience} yrs</span></p>
+                  <p className="text-sm">Languages: <span className="font-medium">{viewTarget.languages.join(', ')}</span></p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-muted/40 px-3 py-3">
+                  <p className="text-xs text-muted-foreground">Consultation Fee</p>
+                  <p className="text-sm font-semibold">₹{viewTarget.consultationFee}</p>
+                </div>
+                <div className="rounded-xl bg-muted/40 px-3 py-3">
+                  <p className="text-xs text-muted-foreground">Rating</p>
+                  <p className="text-sm font-semibold">{viewTarget.rating.toFixed(1)} • {viewTarget.totalReviews} reviews</p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border p-3">
+                <p className="text-sm font-semibold mb-2">Availability</p>
+                <div className="text-sm text-muted-foreground">{viewTarget.availableForInPerson ? 'In Person ' : ''}{viewTarget.availableForVideo ? '· Video' : ''}</div>
+                <p className="text-xs text-muted-foreground mt-2">To book, click 'Book Appointment' on the doctor card. You will see available slots and be able to confirm.</p>
+              </div>
+
+              <div className="flex justify-end">
+                <button onClick={() => { setBookTarget(viewTarget); setViewTarget(null); }} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Book Appointment</button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

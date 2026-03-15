@@ -955,3 +955,85 @@ export async function getMe(userId: string): Promise<{
 
   return { user, profile };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UPDATE PROFILE  (patient or doctor)
+// ─────────────────────────────────────────────────────────────────────────────
+export async function updateProfile(
+  userId: string,
+  role: string,
+  data: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  if (role === Role.PATIENT) {
+    const patient = await prisma.patient.findUnique({ where: { userId } });
+    if (!patient) httpError('Patient profile not found', 404);
+
+    const updated = await prisma.patient.update({
+      where: { userId },
+      data: {
+        ...(data.firstName         !== undefined && { firstName: data.firstName as string }),
+        ...(data.lastName          !== undefined && { lastName: data.lastName as string }),
+        ...(data.phone             !== undefined && { phone: (data.phone as string) || null }),
+        ...(data.bloodGroup        !== undefined && { bloodGroup: data.bloodGroup as never }),
+        ...(data.allergies         !== undefined && { allergies: data.allergies as string[] }),
+        ...(data.chronicConditions !== undefined && { chronicConditions: data.chronicConditions as string[] }),
+        ...(data.address           !== undefined && { address: (data.address as string) || null }),
+        ...(data.city              !== undefined && { city: (data.city as string) || null }),
+        ...(data.state             !== undefined && { state: (data.state as string) || null }),
+        ...(data.pincode           !== undefined && { pincode: (data.pincode as string) || null }),
+      },
+    });
+
+    return {
+      uhid: updated.uhid,
+      firstName: updated.firstName,
+      lastName: updated.lastName,
+      phone: updated.phone,
+      bloodGroup: updated.bloodGroup,
+      allergies: updated.allergies,
+      chronicConditions: updated.chronicConditions,
+      address: updated.address,
+      city: updated.city,
+      state: updated.state,
+      pincode: updated.pincode,
+    };
+  }
+
+  if (role === Role.DOCTOR) {
+    const doctor = await prisma.doctor.findUnique({ where: { userId } });
+    if (!doctor) httpError('Doctor profile not found', 404);
+
+    const updated = await prisma.doctor.update({
+      where: { userId },
+      data: {
+        ...(data.firstName            !== undefined && { firstName: data.firstName as string }),
+        ...(data.lastName             !== undefined && { lastName: data.lastName as string }),
+        ...(data.specialty            !== undefined && { specialty: data.specialty as string }),
+        ...(data.qualifications       !== undefined && { qualifications: data.qualifications as string[] }),
+        ...(data.experienceYears      !== undefined && { experienceYears: data.experienceYears as number }),
+        ...(data.consultationFee      !== undefined && { consultationFee: data.consultationFee as number }),
+        ...(data.languages            !== undefined && { languages: data.languages as string[] }),
+        ...(data.availableForVideo    !== undefined && { availableForVideo: data.availableForVideo as boolean }),
+        ...(data.availableForInPerson !== undefined && { availableForInPerson: data.availableForInPerson as boolean }),
+        ...(data.slotDurationMinutes  !== undefined && { slotDurationMinutes: data.slotDurationMinutes as number }),
+      },
+      include: { hospital: { select: { id: true, name: true, city: true } } },
+    });
+
+    return {
+      firstName: updated.firstName,
+      lastName: updated.lastName,
+      specialty: updated.specialty,
+      qualifications: updated.qualifications,
+      experienceYears: updated.experienceYears,
+      consultationFee: updated.consultationFee,
+      languages: updated.languages,
+      availableForVideo: updated.availableForVideo,
+      availableForInPerson: updated.availableForInPerson,
+      slotDurationMinutes: updated.slotDurationMinutes,
+      hospital: updated.hospital,
+    };
+  }
+
+  httpError('Profile updates are only supported for Patient and Doctor roles', 400);
+}

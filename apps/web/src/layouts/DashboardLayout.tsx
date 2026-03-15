@@ -27,6 +27,7 @@ import {
   Landmark,
   Calendar,
   Stethoscope,
+  Settings,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -53,6 +54,7 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { to: '/doctor/consents',     icon: Shield,    label: 'Consents' },
     { to: '/doctor/records',      icon: FileText,  label: 'Records' },
     { to: '/doctor/appointments', icon: Calendar,  label: 'Appointments' },
+    { to: '/doctor/settings',     icon: Settings,  label: 'Settings' },
     { to: '/doctor/profile',      icon: User,      label: 'Profile' },
   ],
   HOSPITAL_STAFF: [

@@ -17,6 +17,8 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   changePasswordSchema,
+  updatePatientProfileSchema,
+  updateDoctorProfileSchema,
 } from '@/validators/auth.validator';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -241,6 +243,25 @@ export async function getMe(
 ): Promise<void> {
   try {
     const result = await authService.getMe(req.user!.userId);
+    res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /api/v1/auth/profile  [authenticated — PATIENT or DOCTOR]
+// ─────────────────────────────────────────────────────────────────────────────
+export async function updateProfile(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const role = req.user!.role;
+    const schema = role === 'PATIENT' ? updatePatientProfileSchema : updateDoctorProfileSchema;
+    const data = schema.parse(req.body);
+    const result = await authService.updateProfile(req.user!.userId, role, data);
     res.status(200).json({ success: true, data: result });
   } catch (err) {
     next(err);

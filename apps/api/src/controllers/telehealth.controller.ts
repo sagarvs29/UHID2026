@@ -8,6 +8,8 @@ import {
   slotQuerySchema,
   appointmentListSchema,
   submitReviewSchema,
+  setAvailabilitySchema,
+  doctorSettingsSchema,
 } from '@/validators/telehealth.validator';
 
 // ─── GET /hospital/doctors ────────────────────────────────────────────────────
@@ -129,6 +131,41 @@ export async function markNotificationRead(req: AuthRequest, res: Response, next
   try {
     const { id } = req.params;
     const result = await TelehealthService.markNotificationRead(req.user!.userId, id);
+    res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── GET /hospital/doctor/availability ────────────────────────────────────────
+
+export async function getMyAvailability(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const result = await TelehealthService.getMyAvailability(req.user!.userId);
+    res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── PUT /hospital/doctor/availability ────────────────────────────────────────
+
+export async function setAvailability(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const input  = setAvailabilitySchema.parse(req.body);
+    const result = await TelehealthService.setAvailability(req.user!.userId, input);
+    res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── PATCH /hospital/doctor/settings ──────────────────────────────────────────
+
+export async function updateDoctorSettings(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const input  = doctorSettingsSchema.parse(req.body);
+    const result = await TelehealthService.updateDoctorSettings(req.user!.userId, input);
     res.status(200).json({ success: true, data: result });
   } catch (err) {
     next(err);

@@ -9,6 +9,8 @@ import type {
   SlotQueryInput,
   AppointmentListInput,
   SubmitReviewInput,
+  SetAvailabilityInput,
+  DoctorSettingsInput,
 } from '@/validators/telehealth.validator';
 
 // ─── Helper — confirmation number ────────────────────────────────────────────
@@ -588,4 +590,88 @@ export async function markNotificationRead(userId: string, notificationId: strin
     where: { id: notificationId },
     data:  { isRead: true, readAt: new Date() },
   });
+}
+
+// ─── 11. Get Doctor's Own Availability ────────────────────────────────────────
+
+export async function getMyAvailability(userId: string) {
+  const doctor = await prisma.doctor.findUnique({
+    where: { userId },
+    include: { availability: { orderBy: { dayOfWeek: 'asc' } } },
+  });
+  if (!doctor) throw Object.assign(new Error('Doctor profile not found'), { status: 404 });
+
+  return {
+    doctorId: doctor.id,
+    slotDurationMinutes:  doctor.slotDurationMinutes,
+    consultationFee:      doctor.consultationFee,
+    availableForVideo:    doctor.availableForVideo,
+    availableForInPerson: doctor.availableForInPerson,
+    slots: doctor.availability.map((a) => ({
+      id:        a.id,
+      dayOfWeek: a.dayOfWeek,
+      startTime: a.startTime,
+      endTime:   a.endTime,
+      isActive:  a.isActive,
+    })),
+  };
+}
+
+// ─── 12. Set Doctor Availability (upsert weekly schedule) ─────────────────────
+
+export async function setAvailability(userId: string, input: SetAvailabilityInput) {
+  const doctor = await prisma.doctor.findUnique({ where: { userId } });
+  if (!doctor) throw Object.assign(new Error('Doctor profile not found'), { status: 404 });
+
+  // Delete existing, then recreate (simple replace strategy)
+  await prisma.doctorAvailability.deleteMany({ where: { doctorId: doctor.id } });
+
+  const created = await Promise.all(
+    input.slots.map((slot) =>
+      prisma.doctorAvailability.create({
+        data: {
+          doctorId:  doctor.id,
+          dayOfWeek: slot.dayOfWeek as never,
+          startTime: slot.startTime,
+          endTime:   slot.endTime,
+          isActive:  slot.isActive,
+        },
+      })
+    )
+  );
+
+  return {
+    doctorId: doctor.id,
+    slots: created.map((a) => ({
+      id:        a.id,
+      dayOfWeek: a.dayOfWeek,
+      startTime: a.startTime,
+      endTime:   a.endTime,
+      isActive:  a.isActive,
+    })),
+  };
+}
+
+// ─── 13. Update Doctor Settings ───────────────────────────────────────────────
+
+export async function updateDoctorSettings(userId: string, input: DoctorSettingsInput) {
+  const doctor = await prisma.doctor.findUnique({ where: { userId } });
+  if (!doctor) throw Object.assign(new Error('Doctor profile not found'), { status: 404 });
+
+  const updated = await prisma.doctor.update({
+    where: { userId },
+    data: {
+      ...(input.consultationFee      !== undefined && { consultationFee: input.consultationFee }),
+      ...(input.slotDurationMinutes  !== undefined && { slotDurationMinutes: input.slotDurationMinutes }),
+      ...(input.availableForVideo    !== undefined && { availableForVideo: input.availableForVideo }),
+      ...(input.availableForInPerson !== undefined && { availableForInPerson: input.availableForInPerson }),
+    },
+  });
+
+  return {
+    consultationFee:      updated.consultationFee,
+    slotDurationMinutes:  updated.slotDurationMinutes,
+    availableForVideo:    updated.availableForVideo,
+    availableForInPerson: updated.availableForInPerson,
+  };
 }

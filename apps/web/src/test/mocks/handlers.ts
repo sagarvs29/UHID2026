@@ -666,6 +666,49 @@ export const mockNotificationsResponse: NotificationsResponse = {
   unreadCount:   1,
 };
 
+// ─── Profile / Doctor Settings mock data ──────────────────────────────────────
+
+export const mockMeResponse = {
+  user: {
+    id: 'user_pat_001',
+    email: 'patient@test.com',
+    role: 'PATIENT',
+    isEmailVerified: true,
+    isActive: true,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  },
+  profile: {
+    uhid: MOCK_UHID,
+    firstName: 'Test',
+    lastName: 'Patient',
+    dateOfBirth: '1990-01-01',
+    gender: 'MALE',
+    bloodGroup: 'O+',
+    phone: '9876543210',
+    photoUrl: null,
+    allergies: ['Peanuts'],
+    chronicConditions: ['Asthma'],
+    address: '123 Test Lane',
+    city: 'Hyderabad',
+    state: 'Telangana',
+    pincode: '500001',
+  },
+};
+
+export const mockDoctorAvailabilityResponse = {
+  settings: {
+    consultationFee: 500,
+    slotDurationMinutes: 30,
+    availableForVideo: true,
+    availableForInPerson: true,
+  },
+  slots: [
+    { id: 'slot_1', dayOfWeek: 'MONDAY',  startTime: '09:00', endTime: '17:00', isActive: true },
+    { id: 'slot_2', dayOfWeek: 'WEDNESDAY', startTime: '10:00', endTime: '14:00', isActive: true },
+    { id: 'slot_3', dayOfWeek: 'FRIDAY',  startTime: '09:00', endTime: '13:00', isActive: true },
+  ],
+};
+
 // ─── Handlers ─────────────────────────────────────────────────────────────────
 export const handlers = [
   // POST /api/auth/refresh — needed when any 401 triggers the axios interceptor's token refresh
@@ -1138,5 +1181,48 @@ export const handlers = [
   // PATCH /api/v1/notifications/:id/read
   http.patch('/api/v1/notifications/:id/read', () => {
     return HttpResponse.json({ success: true, data: { message: 'Notification marked as read.' } });
+  }),
+
+  // ─── Profile & Doctor Settings handlers ─────────────────────────────────────
+
+  // GET /api/v1/auth/me
+  http.get('/api/v1/auth/me', () => {
+    return HttpResponse.json({
+      success: true,
+      data: mockMeResponse,
+    });
+  }),
+
+  // PATCH /api/v1/auth/profile
+  http.patch('/api/v1/auth/profile', async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({
+      success: true,
+      data: { ...mockMeResponse.profile, ...body },
+    });
+  }),
+
+  // GET /api/v1/hospital/doctor/availability
+  http.get('/api/v1/hospital/doctor/availability', () => {
+    return HttpResponse.json({
+      success: true,
+      data: mockDoctorAvailabilityResponse,
+    });
+  }),
+
+  // PUT /api/v1/hospital/doctor/availability
+  http.put('/api/v1/hospital/doctor/availability', async ({ request }) => {
+    const body = (await request.json()) as { slots: Array<{ dayOfWeek: string; startTime: string; endTime: string; isActive: boolean }> };
+    const created = body.slots.map((s, i) => ({ id: `slot_${i}`, ...s }));
+    return HttpResponse.json({ success: true, data: created });
+  }),
+
+  // PATCH /api/v1/hospital/doctor/settings
+  http.patch('/api/v1/hospital/doctor/settings', async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({
+      success: true,
+      data: { ...mockDoctorAvailabilityResponse.settings, ...body },
+    });
   }),
 ];

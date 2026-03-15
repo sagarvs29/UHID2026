@@ -57,6 +57,7 @@ import AdminAuditLogsPage from '@/pages/admin/AuditLogsPage';
 import FindDoctorPage from '@/pages/patient/FindDoctorPage';
 import PatientAppointmentsPage from '@/pages/patient/AppointmentsPage';
 import DoctorAppointmentsPage from '@/pages/doctor/AppointmentsPage';
+import DoctorSettingsPage from '@/pages/doctor/DoctorSettingsPage';
 import VideoCallPage from '@/pages/appointment/VideoCallPage';
 
 // Pages - Replacing ComingSoon placeholders
@@ -181,6 +182,7 @@ export default function App() {
           <Route path="consents"     element={<DoctorConsentPage />} />
           <Route path="records"      element={<DoctorRecordsPage />} />
           <Route path="appointments" element={<DoctorAppointmentsPage />} />
+          <Route path="settings"     element={<DoctorSettingsPage />} />
           <Route path="profile"      element={<ProfilePage />} />
         </Route>
 

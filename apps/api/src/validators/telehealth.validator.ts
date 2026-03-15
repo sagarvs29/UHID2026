@@ -91,3 +91,34 @@ export const submitReviewSchema = z.object({
 });
 
 export type SubmitReviewInput = z.infer<typeof submitReviewSchema>;
+
+// ─── Doctor Availability ──────────────────────────────────────────────────────
+
+const AvailabilityDayEnum = z.enum([
+  'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY',
+]);
+
+const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export const availabilitySlotSchema = z.object({
+  dayOfWeek: AvailabilityDayEnum,
+  startTime: z.string().regex(timeRegex, 'startTime must be HH:mm'),
+  endTime:   z.string().regex(timeRegex, 'endTime must be HH:mm'),
+  isActive:  z.boolean().default(true),
+});
+
+export const setAvailabilitySchema = z.object({
+  slots: z
+    .array(availabilitySlotSchema)
+    .min(1, 'At least one availability slot is required')
+    .max(7, 'Maximum 7 slots (one per day)'),
+});
+export type SetAvailabilityInput = z.infer<typeof setAvailabilitySchema>;
+
+export const doctorSettingsSchema = z.object({
+  consultationFee:      z.number().min(0).max(100000).optional(),
+  slotDurationMinutes:  z.number().int().min(10).max(120).optional(),
+  availableForVideo:    z.boolean().optional(),
+  availableForInPerson: z.boolean().optional(),
+});
+export type DoctorSettingsInput = z.infer<typeof doctorSettingsSchema>;

@@ -77,6 +77,7 @@ router.post('/reset-password', validate(resetPasswordSchema), authCtrl.resetPass
 
 router.post('/logout', authenticate, authCtrl.logout);
 router.get('/me', authenticate, authCtrl.getMe);
+router.patch('/profile', authenticate, authCtrl.updateProfile);
 router.post(
   '/change-password',
   authenticate,

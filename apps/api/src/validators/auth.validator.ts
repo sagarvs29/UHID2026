@@ -252,6 +252,45 @@ export const refreshTokenSchema = z.object({
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
 
 // ─────────────────────────────────────────────────────────────────────────────
+// UPDATE PATIENT PROFILE  (authenticated PATIENT)
+// ─────────────────────────────────────────────────────────────────────────────
+export const updatePatientProfileSchema = z.object({
+  firstName:         nameField('First name').optional(),
+  lastName:          nameField('Last name').optional(),
+  phone:             phoneField,
+  bloodGroup: z
+    .enum([
+      'A_POSITIVE', 'A_NEGATIVE', 'B_POSITIVE', 'B_NEGATIVE',
+      'AB_POSITIVE', 'AB_NEGATIVE', 'O_POSITIVE', 'O_NEGATIVE', 'UNKNOWN',
+    ])
+    .optional(),
+  allergies:         z.array(z.string().max(100)).max(50).optional(),
+  chronicConditions: z.array(z.string().max(100)).max(50).optional(),
+  address:           z.string().max(300).trim().optional().or(z.literal('')),
+  city:              z.string().max(100).trim().optional().or(z.literal('')),
+  state:             z.string().max(100).trim().optional().or(z.literal('')),
+  pincode:           z.string().max(10).trim().optional().or(z.literal('')),
+});
+export type UpdatePatientProfileInput = z.infer<typeof updatePatientProfileSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UPDATE DOCTOR PROFILE  (authenticated DOCTOR)
+// ─────────────────────────────────────────────────────────────────────────────
+export const updateDoctorProfileSchema = z.object({
+  firstName:            nameField('First name').optional(),
+  lastName:             nameField('Last name').optional(),
+  specialty:            z.string().min(2).max(100).trim().optional(),
+  qualifications:       z.array(z.string().max(100).trim()).min(1).optional(),
+  experienceYears:      z.number().int().min(0).max(80).optional(),
+  consultationFee:      z.number().min(0).max(100000).optional(),
+  languages:            z.array(z.string().max(50)).optional(),
+  availableForVideo:    z.boolean().optional(),
+  availableForInPerson: z.boolean().optional(),
+  slotDurationMinutes:  z.number().int().min(10).max(120).optional(),
+});
+export type UpdateDoctorProfileInput = z.infer<typeof updateDoctorProfileSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Legacy aliases — kept so routes/controller don't need surgery
 // ─────────────────────────────────────────────────────────────────────────────
 export const registerSchema = patientRegisterSchema;
