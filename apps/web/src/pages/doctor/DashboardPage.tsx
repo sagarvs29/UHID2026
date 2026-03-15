@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/stores/auth.store';
+import { useMyProfile } from '@/hooks/useProfile';
 import {
   Users,
   Shield,
@@ -8,6 +9,7 @@ import {
   Stethoscope,
   CalendarDays,
   BookOpen,
+  AlertTriangle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -59,10 +61,28 @@ const ACTIONS: ActionCard[] = [
 
 export default function DoctorDashboardPage() {
   const user = useAuthStore((s) => s.user);
+  const { data: profileData } = useMyProfile();
   const navigate = useNavigate();
+
+  const isVerified = profileData?.profile?.isVerified === true;
 
   return (
     <div className="space-y-6">
+      {/* Verification warning */}
+      {profileData && !isVerified && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-5 py-4" role="alert">
+          <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Profile Not Verified</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Your doctor profile is pending verification by your hospital admin.
+              Some features like requesting patient consent, writing prescriptions,
+              and accessing records will be unavailable until verified.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Welcome banner */}
       <div className="rounded-2xl bg-primary px-6 py-6 text-primary-foreground flex flex-col sm:flex-row sm:items-center gap-4">
         <div className="flex-1">
@@ -76,7 +96,7 @@ export default function DoctorDashboardPage() {
           <Stethoscope className="w-8 h-8 opacity-70" />
           <div>
             <p className="text-xs font-medium opacity-70">Status</p>
-            <p className="text-sm font-bold">Verified Physician</p>
+            <p className="text-sm font-bold">{isVerified ? 'Verified Physician' : 'Pending Verification'}</p>
           </div>
         </div>
       </div>

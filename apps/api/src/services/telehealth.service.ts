@@ -602,11 +602,12 @@ export async function getMyAvailability(userId: string) {
   if (!doctor) throw Object.assign(new Error('Doctor profile not found'), { status: 404 });
 
   return {
-    doctorId: doctor.id,
-    slotDurationMinutes:  doctor.slotDurationMinutes,
-    consultationFee:      doctor.consultationFee,
-    availableForVideo:    doctor.availableForVideo,
-    availableForInPerson: doctor.availableForInPerson,
+    settings: {
+      consultationFee:      doctor.consultationFee,
+      slotDurationMinutes:  doctor.slotDurationMinutes,
+      availableForVideo:    doctor.availableForVideo,
+      availableForInPerson: doctor.availableForInPerson,
+    },
     slots: doctor.availability.map((a) => ({
       id:        a.id,
       dayOfWeek: a.dayOfWeek,
