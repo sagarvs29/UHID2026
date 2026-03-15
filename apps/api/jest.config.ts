@@ -18,7 +18,8 @@ const config: Config = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-  setupFilesAfterEach: [],
+  setupFilesAfterEnv: [],
+  setupFiles: ['<rootDir>/src/__tests__/setup.ts'],
 };
 
 export default config;

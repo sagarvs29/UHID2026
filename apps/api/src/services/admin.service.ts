@@ -4,6 +4,7 @@ import {
   AuditAction,
   AuditSeverity,
   Role,
+  Prisma,
 } from '@prisma/client';
 import type { AuditLogQuery } from '@/validators/admin.validator';
 
@@ -35,7 +36,7 @@ async function writeAuditLog(params: {
       targetId:   params.targetId   ?? null,
       targetType: params.targetType ?? null,
       hospitalId: params.hospitalId ?? null,
-      metadata:   params.metadata   ?? null,
+      metadata:   params.metadata !== undefined ? (params.metadata as Prisma.InputJsonValue) : Prisma.JsonNull,
     }});
   } catch (e) {
     logger.error('Audit log write failed', e);
@@ -295,7 +296,7 @@ export async function getHospitalAnalytics(userId: string) {
 
     prisma.consent.count({
       where: {
-        grantedToDoctor: { hospitalId },
+        doctor: { hospitalId },
         status: 'PENDING',
       },
     }),
@@ -356,7 +357,7 @@ export async function getAuditLogs(
     hospitalId = query.hospitalId;
   }
 
-  const where: Parameters<typeof prisma.auditLog.findMany>[0]['where'] = {};
+  const where: Prisma.AuditLogWhereInput = {};
 
   if (hospitalId)    where.hospitalId = hospitalId;
   if (query.action)  where.action     = query.action as AuditAction;
@@ -413,7 +414,7 @@ export async function exportAuditLogsCsv(
     hospitalId = query.hospitalId;
   }
 
-  const where: Parameters<typeof prisma.auditLog.findMany>[0]['where'] = {};
+  const where: Prisma.AuditLogWhereInput = {};
   if (hospitalId)    where.hospitalId = hospitalId;
   if (query.action)  where.action     = query.action as AuditAction;
   if (query.severity) where.severity  = query.severity as AuditSeverity;

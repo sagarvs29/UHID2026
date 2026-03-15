@@ -8,6 +8,7 @@ import {
   AuditAction,
   AuditSeverity,
   ConsentScope,
+  Prisma,
 } from '@prisma/client';
 
 const EMERGENCY_SECRET = process.env.EMERGENCY_SECRET ?? 'emergency-secret-change-in-production';
@@ -78,7 +79,7 @@ async function writeAuditLog(params: {
         severity:   params.severity ?? AuditSeverity.LOW,
         targetId:   params.targetId   ?? null,
         targetType: params.targetId   ? 'Patient' : null,
-        metadata:   params.details  ?? {},
+        metadata:   (params.details ?? {}) as Prisma.InputJsonValue,
         ipAddress:  params.ipAddress,
       },
     });

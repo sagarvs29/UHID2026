@@ -5,6 +5,7 @@ import {
   Role,
   NoteVisibility,
   ConsentScope,
+  Prisma,
 } from '@prisma/client';
 import {
   CreateClinicalNoteInput,
@@ -44,7 +45,7 @@ async function requireActiveConsent(
   patientId: string,
   scope?: ConsentScope
 ) {
-  const where: Parameters<typeof prisma.consent.findFirst>[0]['where'] = {
+  const where: Prisma.ConsentWhereInput = {
     doctorId,
     patientId,
     status: 'ACTIVE',
@@ -83,7 +84,7 @@ export async function getPatientProfile(uhid: string, doctorUserId: string) {
       gender: true,
       bloodGroup: true,
       allergies: true,
-      emergencyContact: true,
+      emergencyContacts: true,
       createdAt: true,
     },
   });
@@ -140,18 +141,18 @@ export async function createClinicalNote(
       icd10Code:           data.icd10Code,
       icd10Description:    data.icd10Description,
       examinationFindings: data.examinationFindings,
-      vitalSigns:          data.vitalSigns ?? null,
+      vitalSigns:          data.vitalSigns !== undefined ? (data.vitalSigns as Prisma.InputJsonValue) : Prisma.JsonNull,
       diagnosis:           data.diagnosis,
       treatmentPlan:       data.treatmentPlan,
       visibility:          data.visibility as NoteVisibility,
     },
-    include: { doctor: { select: { firstName: true, lastName: true, specialization: true } } },
+    include: { doctor: { select: { firstName: true, lastName: true, specialty: true } } },
   });
 
   // Non-blocking audit log
   prisma.auditLog.create({
     data: {
-      action: 'RECORD_CREATED',
+      action: 'CLINICAL_NOTE_CREATED',
       severity: 'LOW',
       actorId: doctorUserId,
       actorRole: 'DOCTOR',
@@ -187,7 +188,7 @@ export async function getClinicalNotes(
 
     return prisma.clinicalNote.findMany({
       where: { patientId: patient!.id },
-      include: { doctor: { select: { firstName: true, lastName: true, specialization: true } } },
+      include: { doctor: { select: { firstName: true, lastName: true, specialty: true } } },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -199,7 +200,7 @@ export async function getClinicalNotes(
 
   return prisma.clinicalNote.findMany({
     where: { patientId: patient!.id, visibility: 'PATIENT_VISIBLE' },
-    include: { doctor: { select: { firstName: true, lastName: true, specialization: true } } },
+    include: { doctor: { select: { firstName: true, lastName: true, specialty: true } } },
     orderBy: { createdAt: 'desc' },
   });
 }
@@ -213,7 +214,7 @@ export async function getSingleClinicalNote(
   const note = await prisma.clinicalNote.findUnique({
     where: { id: noteId },
     include: {
-      doctor:  { select: { firstName: true, lastName: true, specialization: true } },
+      doctor:  { select: { firstName: true, lastName: true, specialty: true } },
       patient: { select: { uhid: true, userId: true } },
     },
   });
@@ -274,7 +275,18 @@ export async function runPharmaCheck(
   // 1. Drug-Drug Interactions (all pairs)
   for (let i = 0; i < drugs.length; i++) {
     for (let j = i + 1; j < drugs.length; j++) {
-      const interaction = findInteraction(drugs[i].name, drugs[j].name);
+      const nameA = drugs[i].name.toLowerCase().trim();
+      const nameB = drugs[j].name.toLowerCase().trim();
+      const classA = DRUG_CLASS_MAP[nameA] ?? nameA;
+      const classB = DRUG_CLASS_MAP[nameB] ?? nameB;
+
+      // Try name→name, name→class, class→name, class→class
+      const interaction =
+        findInteraction(nameA, nameB) ??
+        findInteraction(classA, nameB) ??
+        findInteraction(nameA, classB) ??
+        findInteraction(classA, classB);
+
       if (interaction) {
         issues.push({
           type:            'DRUG_INTERACTION',
@@ -284,7 +296,7 @@ export async function runPharmaCheck(
           clinicalEffect:  interaction.clinicalEffect,
           alternatives:    interaction.alternatives,
           requiresOverride: interaction.severity === 'HIGH' || interaction.severity === 'CRITICAL',
-          interactionKey:  `DDI:${drugs[i].name.toLowerCase()}-${drugs[j].name.toLowerCase()}`,
+          interactionKey:  `DDI:${nameA}-${nameB}`,
         });
       }
     }
@@ -475,7 +487,7 @@ export async function createPrescription(
   if (criticalOverrides.length > 0) {
     prisma.auditLog.create({
       data: {
-        action:    'RECORD_CREATED',
+        action:    'PHARMA_CHECK_OVERRIDE',
         severity:  'CRITICAL',
         actorId:   doctorUserId,
         actorRole: 'DOCTOR',
@@ -523,7 +535,7 @@ export async function getPrescriptions(
     where: { patientId: patient!.id },
     include: {
       items:  true,
-      doctor: { select: { firstName: true, lastName: true, specialization: true } },
+      doctor: { select: { firstName: true, lastName: true, specialty: true } },
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -539,7 +551,7 @@ export async function getSinglePrescription(
     where: { id: prescriptionId },
     include: {
       items:           true,
-      doctor:          { select: { firstName: true, lastName: true, specialization: true } },
+      doctor:          { select: { firstName: true, lastName: true, specialty: true } },
       patient:         { select: { uhid: true, userId: true, firstName: true, lastName: true } },
       pharmaCheckLogs: true,
     },

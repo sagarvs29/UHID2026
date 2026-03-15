@@ -8,6 +8,7 @@ import {
   AuditSeverity,
   ConsentScope,
   ConsentStatus,
+  Prisma,
 } from '@prisma/client';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -42,7 +43,7 @@ async function writeAuditLog(params: {
         severity:   params.severity ?? AuditSeverity.LOW,
         targetId:   params.targetId   ?? null,
         targetType: params.targetId   ? 'InsuranceClaim' : null,
-        metadata:   params.details    ?? null,
+        metadata:   params.details !== undefined ? (params.details as Prisma.InputJsonValue) : Prisma.JsonNull,
       },
     });
   } catch (e) {
@@ -139,7 +140,7 @@ async function runFraudDetection(params: {
 
   // 5. DIAGNOSIS_MISMATCH — very high amount for outpatient/diagnostic
   if (
-    (params.claimType === ClaimType.OUTPATIENT || params.claimType === ClaimType.DIAGNOSTIC) &&
+    (params.claimType === ClaimType.OUTPATIENT) &&
     params.claimedAmount > 500_000
   ) {
     flags.push('DIAGNOSIS_MISMATCH');
@@ -319,7 +320,7 @@ export async function getClaimPatientRecords(userId: string, claimId: string) {
     where: {
       patientId:           claim!.patient.id,
       insuranceProviderId: provider!.id,
-      status:              ConsentStatus.APPROVED,
+      status:              ConsentStatus.ACTIVE,
       expiresAt:           { gt: now },
     },
     orderBy: { grantedAt: 'desc' },

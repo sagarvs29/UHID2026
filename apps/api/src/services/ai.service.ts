@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma';
-import { SummaryType, ConsentScope, Role } from '@prisma/client';
+import { SummaryType, ConsentScope, Role, Prisma } from '@prisma/client';
 import axios from 'axios';
 import logger from '@/lib/logger';
 
@@ -99,7 +99,7 @@ export async function decodeReport(userId: string, recordId: string) {
       patientId:     patient!.id,
       summaryType:   SummaryType.REPORT_DECODER,
       summaryText:   aiResult.summaryText,
-      structuredData: aiResult as unknown as Record<string, unknown>,
+      structuredData: (aiResult as unknown as Prisma.InputJsonValue),
       riskLevel:     aiResult.overallRiskLevel,
       modelUsed:     aiResult.modelUsed,
       tokensUsed:    aiResult.tokensUsed,
@@ -213,7 +213,7 @@ export async function getClinicalSummary(doctorUserId: string, patientUhid: stri
       patientId:     patient!.id,
       summaryType:   SummaryType.CLINICAL_SUMMARY,
       summaryText:   aiResult.summaryForDoctor,
-      structuredData: aiResult as unknown as Record<string, unknown>,
+      structuredData: (aiResult as unknown as Prisma.InputJsonValue),
       riskLevel:     aiResult.riskScore.overall,
       modelUsed:     aiResult.modelUsed,
       tokensUsed:    aiResult.tokensUsed,

@@ -1,4 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
+import { AuthRequest } from '@/types';
 import { validate } from '@/middlewares/validate.middleware';
 import {
   verifyStaffSchema,
@@ -11,7 +12,7 @@ import * as adminService from '@/services/admin.service';
 // ─── Hospital Admin ───────────────────────────────────────────────────────────
 
 export const getPendingVerifications = [
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const data = await adminService.getPendingVerifications(req.user!.userId);
       res.json({ success: true, data });
@@ -21,7 +22,7 @@ export const getPendingVerifications = [
 
 export const verifyStaff = [
   validate(verifyStaffSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { userId } = req.params;
       const { action, notes } = req.body as { action: 'VERIFY' | 'REJECT' | 'REQUEST_MORE_INFO'; notes?: string };
@@ -33,7 +34,7 @@ export const verifyStaff = [
 
 export const deactivateStaff = [
   validate(deactivateStaffSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { userId } = req.params;
       const { reason } = req.body as { reason: string };
@@ -44,7 +45,7 @@ export const deactivateStaff = [
 ];
 
 export const getActiveStaff = [
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const data = await adminService.getActiveStaff(req.user!.userId);
       res.json({ success: true, data });
@@ -53,7 +54,7 @@ export const getActiveStaff = [
 ];
 
 export const getHospitalAnalytics = [
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const data = await adminService.getHospitalAnalytics(req.user!.userId);
       res.json({ success: true, data });
@@ -63,7 +64,7 @@ export const getHospitalAnalytics = [
 
 export const getAuditLogs = [
   validate(auditLogQuerySchema, 'query'),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const query  = req.query as unknown as import('@/validators/admin.validator').AuditLogQuery;
       const parsed = auditLogQuerySchema.parse(query);
@@ -74,7 +75,7 @@ export const getAuditLogs = [
 ];
 
 export const exportAuditLogs = [
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const parsed = auditLogQuerySchema.parse(req.query);
       const csv    = await adminService.exportAuditLogsCsv(
@@ -93,7 +94,7 @@ export const exportAuditLogs = [
 // ─── Super Admin ──────────────────────────────────────────────────────────────
 
 export const listHospitals = [
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const data = await adminService.listHospitals();
       res.json({ success: true, data });
@@ -103,7 +104,7 @@ export const listHospitals = [
 
 export const hospitalAction = [
   validate(hospitalActionSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { id }     = req.params;
       const { action, notes } = req.body as { action: 'VERIFY' | 'SUSPEND'; notes?: string };
@@ -114,7 +115,7 @@ export const hospitalAction = [
 ];
 
 export const getPlatformAnalytics = [
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const data = await adminService.getPlatformAnalytics();
       res.json({ success: true, data });

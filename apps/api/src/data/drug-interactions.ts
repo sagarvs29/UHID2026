@@ -324,6 +324,12 @@ export const DRUG_CLASS_MAP: Record<string, string> = {
   escitalopram: 'ssri',
   citalopram: 'ssri',
   paroxetine: 'ssri',
+  // MAOIs
+  phenelzine: 'maoi',
+  tranylcypromine: 'maoi',
+  isocarboxazid: 'maoi',
+  selegiline: 'maoi',
+  rasagiline: 'maoi',
   // ACE Inhibitors
   ramipril: 'ace_inhibitor',
   enalapril: 'ace_inhibitor',

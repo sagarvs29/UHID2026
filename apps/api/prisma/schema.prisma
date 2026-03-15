@@ -305,15 +305,15 @@ enum AvailabilityDay {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model User {
-  id               String    @id @default(cuid())
-  email            String    @unique
+  id               String   @id @default(cuid())
+  email            String   @unique
   passwordHash     String
   role             Role
-  isEmailVerified  Boolean   @default(false)
+  isEmailVerified  Boolean  @default(false)
   emailVerifyToken String?
-  isActive         Boolean   @default(true)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   // Role profiles (exactly one will be populated per user)
   patient           Patient?
@@ -356,48 +356,48 @@ model Patient {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Relationships
-  medicalRecords   MedicalRecord[]
-  prescriptions    Prescription[]
-  clinicalNotes    ClinicalNote[]
-  consents         Consent[]
-  qrCodes          QrCode[]
-  emergencyAccesses EmergencyAccess[]
-  emergencyContacts EmergencyContact[]
-  appointments     Appointment[]
-  insuranceClaims  InsuranceClaim[]
-  aiSummaries      AiReportSummary[]
-  doctorReviews    DoctorReview[]
-  qrScanLogs       QrScanLog[]
-  pharmaCheckLogs  PharmaCheckLog[]
-  familyLinksAsChild   FamilyLink[] @relation("ChildPatient")
-  familyLinksAsParent  FamilyLink[] @relation("ParentPatient")
+  medicalRecords      MedicalRecord[]
+  prescriptions       Prescription[]
+  clinicalNotes       ClinicalNote[]
+  consents            Consent[]
+  qrCodes             QrCode[]
+  emergencyAccesses   EmergencyAccess[]
+  emergencyContacts   EmergencyContact[]
+  appointments        Appointment[]
+  insuranceClaims     InsuranceClaim[]
+  aiSummaries         AiReportSummary[]
+  doctorReviews       DoctorReview[]
+  qrScanLogs          QrScanLog[]
+  pharmaCheckLogs     PharmaCheckLog[]
+  familyLinksAsChild  FamilyLink[]       @relation("ChildPatient")
+  familyLinksAsParent FamilyLink[]       @relation("ParentPatient")
 
   @@map("patients")
 }
 
 model Doctor {
-  id                   String   @id @default(cuid())
-  userId               String   @unique
+  id                   String    @id @default(cuid())
+  userId               String    @unique
   hospitalId           String
   firstName            String
   lastName             String
   specialty            String
-  licenseNumber        String   @unique
+  licenseNumber        String    @unique
   qualifications       String[]
-  experienceYears      Int      @default(0)
-  consultationFee      Float    @default(0.0)
-  languages            String[] @default(["English"])
-  availableForVideo    Boolean  @default(true)
-  availableForInPerson Boolean  @default(true)
-  slotDurationMinutes  Int      @default(30)
-  isVerified           Boolean  @default(false)
+  experienceYears      Int       @default(0)
+  consultationFee      Float     @default(0.0)
+  languages            String[]  @default(["English"])
+  availableForVideo    Boolean   @default(true)
+  availableForInPerson Boolean   @default(true)
+  slotDurationMinutes  Int       @default(30)
+  isVerified           Boolean   @default(false)
   verifiedAt           DateTime?
   verifiedByAdminId    String?
-  rating               Float    @default(0.0)
-  totalReviews         Int      @default(0)
+  rating               Float     @default(0.0)
+  totalReviews         Int       @default(0)
   photoUrl             String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   hospital Hospital @relation(fields: [hospitalId], references: [id])
@@ -416,16 +416,16 @@ model Doctor {
 }
 
 model HospitalStaff {
-  id          String    @id @default(cuid())
-  userId      String    @unique
-  hospitalId  String
-  firstName   String
-  lastName    String
-  staffType   StaffType
-  employeeId  String?
-  isVerified  Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  hospitalId String
+  firstName  String
+  lastName   String
+  staffType  StaffType
+  employeeId String?
+  isVerified Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   hospital Hospital @relation(fields: [hospitalId], references: [id])
@@ -458,9 +458,9 @@ model InsuranceProvider {
   verifiedAt    DateTime?
   createdAt     DateTime  @default(now())
 
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   consentsRequested Consent[]
-  claims          InsuranceClaim[]
+  claims            InsuranceClaim[]
 
   @@map("insurance_providers")
 }
@@ -505,14 +505,14 @@ model Hospital {
 }
 
 model EmergencyContact {
-  id                     String   @id @default(cuid())
-  patientId              String
-  name                   String
-  relation               String
-  phone                  String
-  isOnUhid               Boolean  @default(false)
-  emergencyContactUhid   String?
-  createdAt              DateTime @default(now())
+  id                   String   @id @default(cuid())
+  patientId            String
+  name                 String
+  relation             String
+  phone                String
+  isOnUhid             Boolean  @default(false)
+  emergencyContactUhid String?
+  createdAt            DateTime @default(now())
 
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
@@ -527,7 +527,7 @@ model FamilyLink {
   canManage         Boolean  @default(false)
   createdAt         DateTime @default(now())
 
-  patient       Patient @relation("ChildPatient",  fields: [patientId],         references: [id])
+  patient       Patient @relation("ChildPatient", fields: [patientId], references: [id])
   linkedPatient Patient @relation("ParentPatient", fields: [linkedToPatientId], references: [id])
 
   @@map("family_links")
@@ -538,33 +538,33 @@ model FamilyLink {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model MedicalRecord {
-  id                 String         @id @default(cuid())
-  patientId          String
-  uploadedByStaffId  String?
-  hospitalId         String?
-  recordType         RecordType
-  subType            RecordSubType?
-  title              String
-  description        String?
-  fileUrl            String
-  filePublicId       String
-  fileHash           String
-  mimeType           String
-  fileSize           Int
-  extractedText      String?
-  recordDate         DateTime?
-  tags               String[]       @default([])
-  isDeleted          Boolean        @default(false)
-  deletedAt          DateTime?
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  id                String         @id @default(cuid())
+  patientId         String
+  uploadedByStaffId String?
+  hospitalId        String?
+  recordType        RecordType
+  subType           RecordSubType?
+  title             String
+  description       String?
+  fileUrl           String
+  filePublicId      String
+  fileHash          String
+  mimeType          String
+  fileSize          Int
+  extractedText     String?
+  recordDate        DateTime?
+  tags              String[]       @default([])
+  isDeleted         Boolean        @default(false)
+  deletedAt         DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
-  patient         Patient        @relation(fields: [patientId],         references: [id])
+  patient         Patient        @relation(fields: [patientId], references: [id])
   uploadedByStaff HospitalStaff? @relation(fields: [uploadedByStaffId], references: [id])
-  hospital        Hospital?      @relation(fields: [hospitalId],        references: [id])
+  hospital        Hospital?      @relation(fields: [hospitalId], references: [id])
 
-  aiSummaries     AiReportSummary[]
-  claimDocuments  ClaimDocument[]
+  aiSummaries    AiReportSummary[]
+  claimDocuments ClaimDocument[]
 
   @@index([patientId])
   @@index([recordType])
@@ -574,19 +574,19 @@ model MedicalRecord {
 }
 
 model Prescription {
-  id             String    @id @default(cuid())
-  patientId      String
-  doctorId       String
-  hospitalId     String
-  appointmentId  String?
-  diagnosis      String
-  notes          String?
-  followUpDate   DateTime?
-  validUntil     DateTime?
-  createdAt      DateTime  @default(now())
+  id            String    @id @default(cuid())
+  patientId     String
+  doctorId      String
+  hospitalId    String
+  appointmentId String?
+  diagnosis     String
+  notes         String?
+  followUpDate  DateTime?
+  validUntil    DateTime?
+  createdAt     DateTime  @default(now())
 
-  patient     Patient      @relation(fields: [patientId],     references: [id])
-  doctor      Doctor       @relation(fields: [doctorId],      references: [id])
+  patient     Patient      @relation(fields: [patientId], references: [id])
+  doctor      Doctor       @relation(fields: [doctorId], references: [id])
   appointment Appointment? @relation(fields: [appointmentId], references: [id])
 
   items           PrescriptionItem[]
@@ -632,8 +632,8 @@ model ClinicalNote {
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 
-  patient     Patient      @relation(fields: [patientId],     references: [id])
-  doctor      Doctor       @relation(fields: [doctorId],      references: [id])
+  patient     Patient      @relation(fields: [patientId], references: [id])
+  doctor      Doctor       @relation(fields: [doctorId], references: [id])
   appointment Appointment? @relation(fields: [appointmentId], references: [id])
 
   @@index([patientId])
@@ -646,25 +646,25 @@ model ClinicalNote {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Consent {
-  id                  String        @id @default(cuid())
+  id                  String         @id @default(cuid())
   patientId           String
   grantedToType       String
   doctorId            String?
   insuranceProviderId String?
   scope               ConsentScope[]
   purpose             String
-  status              ConsentStatus @default(PENDING)
-  isTemporary         Boolean       @default(true)
+  status              ConsentStatus  @default(PENDING)
+  isTemporary         Boolean        @default(true)
   durationHours       Int?
   expiresAt           DateTime?
-  otpVerified         Boolean       @default(false)
+  otpVerified         Boolean        @default(false)
   otpVerifiedAt       DateTime?
-  requestedAt         DateTime      @default(now())
+  requestedAt         DateTime       @default(now())
   grantedAt           DateTime?
   revokedAt           DateTime?
 
-  patient           Patient            @relation(fields: [patientId],           references: [id])
-  doctor            Doctor?            @relation(fields: [doctorId],            references: [id])
+  patient           Patient            @relation(fields: [patientId], references: [id])
+  doctor            Doctor?            @relation(fields: [doctorId], references: [id])
   insuranceProvider InsuranceProvider? @relation(fields: [insuranceProviderId], references: [id])
 
   @@index([patientId])
@@ -675,24 +675,24 @@ model Consent {
 }
 
 model QrCode {
-  id               String         @id @default(cuid())
-  patientId        String
-  jti              String         @unique
-  scope            ConsentScope[]
-  tier             Int            @default(1)
-  isOneTime        Boolean        @default(false)
-  isEmergencyCard  Boolean        @default(false)
-  label            String?
-  expiresAt        DateTime
-  usedAt           DateTime?
-  usedByDoctorId   String?
-  isRevoked        Boolean        @default(false)
-  revokedAt        DateTime?
-  revokedReason    String?
-  createdAt        DateTime       @default(now())
+  id              String         @id @default(cuid())
+  patientId       String
+  jti             String         @unique
+  scope           ConsentScope[]
+  tier            Int            @default(1)
+  isOneTime       Boolean        @default(false)
+  isEmergencyCard Boolean        @default(false)
+  label           String?
+  expiresAt       DateTime
+  usedAt          DateTime?
+  usedByDoctorId  String?
+  isRevoked       Boolean        @default(false)
+  revokedAt       DateTime?
+  revokedReason   String?
+  createdAt       DateTime       @default(now())
 
-  patient   Patient      @relation(fields: [patientId], references: [id])
-  scanLogs  QrScanLog[]
+  patient  Patient     @relation(fields: [patientId], references: [id])
+  scanLogs QrScanLog[]
 
   @@index([patientId])
   @@index([jti])
@@ -717,7 +717,7 @@ model QrScanLog {
   reportedByPatient Boolean    @default(false)
   scannedAt         DateTime   @default(now())
 
-  qrCode    QrCode @relation(fields: [qrCodeId],  references: [id])
+  qrCode    QrCode  @relation(fields: [qrCodeId], references: [id])
   patient   Patient @relation(fields: [patientId], references: [id])
   scannedBy User?   @relation(fields: [scannedById], references: [id])
 
@@ -729,22 +729,22 @@ model QrScanLog {
 }
 
 model EmergencyAccess {
-  id                       String              @id @default(cuid())
-  patientId                String
-  accessedByDoctorId       String?
-  accessType               EmergencyAccessType
-  reason                   String?
-  reasonType               String?
-  latitude                 Float?
-  longitude                Float?
-  emergencyCode            String?
-  emergencyCodeExpiresAt   DateTime?
-  expiresAt                DateTime
-  isActive                 Boolean             @default(true)
-  cancelledAt              DateTime?
-  createdAt                DateTime            @default(now())
+  id                     String              @id @default(cuid())
+  patientId              String
+  accessedByDoctorId     String?
+  accessType             EmergencyAccessType
+  reason                 String?
+  reasonType             String?
+  latitude               Float?
+  longitude              Float?
+  emergencyCode          String?
+  emergencyCodeExpiresAt DateTime?
+  expiresAt              DateTime
+  isActive               Boolean             @default(true)
+  cancelledAt            DateTime?
+  createdAt              DateTime            @default(now())
 
-  patient          Patient @relation(fields: [patientId],          references: [id])
+  patient          Patient @relation(fields: [patientId], references: [id])
   accessedByDoctor Doctor? @relation(fields: [accessedByDoctorId], references: [id])
 
   @@map("emergency_accesses")
@@ -767,7 +767,7 @@ model AiReportSummary {
   generatedAt    DateTime
   updatedAt      DateTime    @updatedAt
 
-  record  MedicalRecord? @relation(fields: [recordId],  references: [id])
+  record  MedicalRecord? @relation(fields: [recordId], references: [id])
   patient Patient        @relation(fields: [patientId], references: [id])
 
   @@map("ai_report_summaries")
@@ -787,8 +787,8 @@ model PharmaCheckLog {
   createdAt      DateTime            @default(now())
 
   prescription Prescription? @relation(fields: [prescriptionId], references: [id])
-  doctor       Doctor        @relation(fields: [doctorId],       references: [id])
-  patient      Patient       @relation(fields: [patientId],      references: [id])
+  doctor       Doctor        @relation(fields: [doctorId], references: [id])
+  patient      Patient       @relation(fields: [patientId], references: [id])
 
   @@map("pharma_check_logs")
 }
@@ -845,7 +845,7 @@ model InsuranceClaim {
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
 
-  patient           Patient           @relation(fields: [patientId],           references: [id])
+  patient           Patient           @relation(fields: [patientId], references: [id])
   insuranceProvider InsuranceProvider @relation(fields: [insuranceProviderId], references: [id])
 
   documents ClaimDocument[]
@@ -867,7 +867,7 @@ model ClaimDocument {
   verifiedAt       DateTime?
   uploadedAt       DateTime  @default(now())
 
-  claim          InsuranceClaim @relation(fields: [claimId],          references: [id], onDelete: Cascade)
+  claim          InsuranceClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
   originalRecord MedicalRecord? @relation(fields: [originalRecordId], references: [id])
 
   @@map("claim_documents")
@@ -895,8 +895,8 @@ model Appointment {
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 
-  patient  Patient  @relation(fields: [patientId],  references: [id])
-  doctor   Doctor   @relation(fields: [doctorId],   references: [id])
+  patient  Patient  @relation(fields: [patientId], references: [id])
+  doctor   Doctor   @relation(fields: [doctorId], references: [id])
   hospital Hospital @relation(fields: [hospitalId], references: [id])
 
   prescriptions Prescription[]
@@ -911,14 +911,14 @@ model Appointment {
 }
 
 model DoctorAvailability {
-  id          String          @id @default(cuid())
-  doctorId    String
-  dayOfWeek   AvailabilityDay
-  startTime   String
-  endTime     String
-  isActive    Boolean         @default(true)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id        String          @id @default(cuid())
+  doctorId  String
+  dayOfWeek AvailabilityDay
+  startTime String
+  endTime   String
+  isActive  Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 
   doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
 
@@ -936,8 +936,8 @@ model DoctorReview {
   isAnonymous   Boolean  @default(false)
   createdAt     DateTime @default(now())
 
-  doctor      Doctor      @relation(fields: [doctorId],      references: [id])
-  patient     Patient     @relation(fields: [patientId],     references: [id])
+  doctor      Doctor      @relation(fields: [doctorId], references: [id])
+  patient     Patient     @relation(fields: [patientId], references: [id])
   appointment Appointment @relation(fields: [appointmentId], references: [id])
 
   @@unique([patientId, appointmentId])
@@ -992,11 +992,11 @@ model DrugInteraction {
 
 /// Seeded once using the `icd10-codes` npm package (~70,000 codes). No API needed.
 model Icd10Code {
-  id          String   @id @default(cuid())
-  code        String   @unique
+  id          String  @id @default(cuid())
+  code        String  @unique
   description String
   category    String?
-  isActive    Boolean  @default(true)
+  isActive    Boolean @default(true)
 
   @@index([category])
   @@map("icd10_codes")
