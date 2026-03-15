@@ -8,7 +8,7 @@ import {
   Role,
   Prisma,
 } from '@prisma/client';
-import { sendHospitalAdminCredentialsEmail } from '@/lib/email';
+import { sendHospitalAdminCredentialsEmail, sendStaffVerificationResultEmail } from '@/lib/email';
 import type { AuditLogQuery } from '@/validators/admin.validator';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -122,15 +122,23 @@ export async function verifyStaff(
 ) {
   const hospitalId = await getAdminHospitalId(actorUserId);
 
-  // Determine target type
+  // Determine target type and fetch email for notification
   const user = await prisma.user.findUnique({
     where:  { id: targetUserId },
-    select: { role: true },
+    select: { role: true, email: true },
   });
   if (!user) httpError('User not found', 404);
 
+  // Fetch hospital name for the email
+  const hospital = await prisma.hospital.findUnique({
+    where: { id: hospitalId },
+    select: { name: true },
+  });
+
   const isVerified = action === 'VERIFY';
   let profileId: string | null = null;
+  let staffName = '';
+  let roleLabel = '';
 
   if (user!.role === 'DOCTOR') {
     const doctor = await prisma.doctor.findFirst({
@@ -146,6 +154,8 @@ export async function verifyStaff(
       },
     });
     profileId = doctor!.id;
+    staffName = `Dr. ${doctor!.firstName} ${doctor!.lastName}`;
+    roleLabel = 'Doctor';
   } else if (user!.role === 'HOSPITAL_STAFF') {
     const staff = await prisma.hospitalStaff.findFirst({
       where: { userId: targetUserId, hospitalId },
@@ -156,6 +166,8 @@ export async function verifyStaff(
       data:  { isVerified },
     });
     profileId = staff!.id;
+    staffName = `${staff!.firstName} ${staff!.lastName}`;
+    roleLabel = 'Hospital Staff';
   } else {
     httpError('User is not a doctor or staff member', 400);
   }
@@ -174,6 +186,18 @@ export async function verifyStaff(
     hospitalId,
     metadata:   { action, notes, profileId },
   });
+
+  // Send email notification to the staff/doctor (fire-and-forget)
+  sendStaffVerificationResultEmail(
+    user!.email,
+    staffName,
+    hospital?.name ?? 'your hospital',
+    action,
+    roleLabel,
+    notes,
+  ).catch((e) => logger.error('[Email] Failed to send verification result email', e));
+
+  logger.info(`[Admin] Staff verification: ${action} for ${staffName} (${targetUserId}) at hospital ${hospitalId}`);
 
   return { success: true, action, targetUserId };
 }

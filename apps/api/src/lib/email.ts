@@ -330,3 +330,74 @@ export async function sendConsentStatusEmail(
     `,
   });
 }
+
+// ─── Staff / Doctor Verification Result Email ─────────────────────────────────
+
+export async function sendStaffVerificationResultEmail(
+  to: string,
+  staffName: string,
+  hospitalName: string,
+  action: 'VERIFY' | 'REJECT' | 'REQUEST_MORE_INFO',
+  roleLabel: string,
+  notes?: string,
+): Promise<void> {
+  const loginUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5173'}/login`;
+
+  const cfgMap: Record<string, { subject: string; color: string; icon: string; heading: string; body: string; cta: string }> = {
+    VERIFY: {
+      subject: `UHID — Your ${roleLabel} account at ${hospitalName} is approved! ✅`,
+      color: '#16A34A',
+      icon: '✅',
+      heading: 'Account Approved!',
+      body: `Great news! Your <strong>${roleLabel}</strong> account at <strong>${hospitalName}</strong> has been <strong>approved</strong> by the Hospital Admin.`,
+      cta: `
+        <p style="color: #374151; font-size: 14px;">You can now log in and start using the UHID platform.</p>
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${loginUrl}" style="background: #16A34A; color: white; padding: 12px 32px; border-radius: 6px; text-decoration: none; font-weight: bold;">Login Now</a>
+        </div>`,
+    },
+    REJECT: {
+      subject: `UHID — Your ${roleLabel} account at ${hospitalName} was not approved`,
+      color: '#DC2626',
+      icon: '❌',
+      heading: 'Account Not Approved',
+      body: `Unfortunately, your <strong>${roleLabel}</strong> account at <strong>${hospitalName}</strong> has been <strong>rejected</strong> by the Hospital Admin.`,
+      cta: notes
+        ? `<div style="background: #FEF2F2; border: 1px solid #DC2626; border-radius: 8px; padding: 14px; margin: 16px 0;">
+            <p style="margin: 0; color: #991B1B; font-size: 13px;"><strong>Reason:</strong> ${notes}</p>
+          </div>
+          <p style="color: #6B7280; font-size: 14px;">If you believe this was a mistake, please contact the hospital administration directly.</p>`
+        : `<p style="color: #6B7280; font-size: 14px;">If you believe this was a mistake, please contact the hospital administration directly.</p>`,
+    },
+    REQUEST_MORE_INFO: {
+      subject: `UHID — Additional information needed for your ${roleLabel} account`,
+      color: '#D97706',
+      icon: '📋',
+      heading: 'More Information Required',
+      body: `The Hospital Admin at <strong>${hospitalName}</strong> has requested additional information to verify your <strong>${roleLabel}</strong> account.`,
+      cta: notes
+        ? `<div style="background: #FFFBEB; border: 1px solid #D97706; border-radius: 8px; padding: 14px; margin: 16px 0;">
+            <p style="margin: 0; color: #92400E; font-size: 13px;"><strong>Admin's note:</strong> ${notes}</p>
+          </div>
+          <p style="color: #6B7280; font-size: 14px;">Please contact the hospital administration to provide the requested documents or information.</p>`
+        : `<p style="color: #6B7280; font-size: 14px;">Please contact the hospital administration to provide the requested information.</p>`,
+    },
+  };
+
+  const c = cfgMap[action];
+  await transporter.sendMail({
+    from: `"UHID Health" <${process.env.SMTP_USER}>`,
+    to,
+    subject: c.subject,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto;">
+        <h2 style="color: ${c.color};">${c.icon} ${c.heading}</h2>
+        <p>Hello <strong>${staffName}</strong>,</p>
+        <p>${c.body}</p>
+        ${c.cta}
+        <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 20px 0;" />
+        <p style="color: #9CA3AF; font-size: 12px;">UHID — UniHealth ID Platform</p>
+      </div>
+    `,
+  });
+}

@@ -16,6 +16,7 @@ jest.mock('@/lib/prisma', () => ({
     user:          { findUnique: jest.fn(), update: jest.fn() },
     doctor:        { findFirst: jest.fn(), update: jest.fn(), findMany: jest.fn() },
     hospitalStaff: { findFirst: jest.fn(), update: jest.fn(), findMany: jest.fn() },
+    hospital:      { findUnique: jest.fn() },
     auditLog:      { create: jest.fn().mockResolvedValue({}), findMany: jest.fn(), count: jest.fn() },
     medicalRecord: { groupBy: jest.fn(), count: jest.fn() },
     prescription:  { count: jest.fn() },
@@ -26,6 +27,12 @@ jest.mock('@/lib/prisma', () => ({
 jest.mock('@/lib/logger', () => ({
   __esModule: true,
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+}));
+
+jest.mock('@/lib/email', () => ({
+  __esModule: true,
+  sendStaffVerificationResultEmail: jest.fn().mockResolvedValue(undefined),
+  sendHospitalAdminCredentialsEmail: jest.fn().mockResolvedValue(undefined),
 }));
 
 const mockPrisma = prisma as jest.Mocked<typeof prisma>;
@@ -40,6 +47,9 @@ function mockAdminProfile() {
     userId: ADMIN_USER_ID, hospitalId: HOSPITAL_ID,
     firstName: 'Admin', lastName: 'Test',
   });
+  (mockPrisma.hospital.findUnique as jest.Mock).mockResolvedValue({
+    id: HOSPITAL_ID, name: 'Test Hospital',
+  });
 }
 
 describe('verifyStaff', () => {
@@ -49,8 +59,8 @@ describe('verifyStaff', () => {
   });
 
   it('sets isVerified=true for a DOCTOR', async () => {
-    (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ role: 'DOCTOR' });
-    const doctor = { id: 'doc_001', userId: TARGET_USER_ID, hospitalId: HOSPITAL_ID };
+    (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ role: 'DOCTOR', email: 'doctor@test.com' });
+    const doctor = { id: 'doc_001', userId: TARGET_USER_ID, hospitalId: HOSPITAL_ID, firstName: 'John', lastName: 'Doe' };
     (mockPrisma.doctor.findFirst as jest.Mock).mockResolvedValue(doctor);
     (mockPrisma.doctor.update as jest.Mock).mockResolvedValue({ ...doctor, isVerified: true });
 
@@ -65,8 +75,8 @@ describe('verifyStaff', () => {
   });
 
   it('sets isVerified=false for REJECT action', async () => {
-    (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ role: 'DOCTOR' });
-    const doctor = { id: 'doc_001', userId: TARGET_USER_ID, hospitalId: HOSPITAL_ID };
+    (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ role: 'DOCTOR', email: 'doctor@test.com' });
+    const doctor = { id: 'doc_001', userId: TARGET_USER_ID, hospitalId: HOSPITAL_ID, firstName: 'John', lastName: 'Doe' };
     (mockPrisma.doctor.findFirst as jest.Mock).mockResolvedValue(doctor);
     (mockPrisma.doctor.update as jest.Mock).mockResolvedValue({ ...doctor, isVerified: false });
 
@@ -81,8 +91,8 @@ describe('verifyStaff', () => {
   });
 
   it('creates an audit log entry', async () => {
-    (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ role: 'DOCTOR' });
-    const doctor = { id: 'doc_001', userId: TARGET_USER_ID, hospitalId: HOSPITAL_ID };
+    (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ role: 'DOCTOR', email: 'doctor@test.com' });
+    const doctor = { id: 'doc_001', userId: TARGET_USER_ID, hospitalId: HOSPITAL_ID, firstName: 'John', lastName: 'Doe' };
     (mockPrisma.doctor.findFirst as jest.Mock).mockResolvedValue(doctor);
     (mockPrisma.doctor.update as jest.Mock).mockResolvedValue(doctor);
 
@@ -96,7 +106,7 @@ describe('verifyStaff', () => {
   });
 
   it('throws 403 when doctor belongs to a different hospital', async () => {
-    (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ role: 'DOCTOR' });
+    (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ role: 'DOCTOR', email: 'doctor@test.com' });
     // Doctor not found for this hospitalId
     (mockPrisma.doctor.findFirst as jest.Mock).mockResolvedValue(null);
 
