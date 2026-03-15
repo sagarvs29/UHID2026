@@ -61,15 +61,70 @@ export default function HospitalsPage() {
 
   const handleCreateHospital = () => {
     setCreateError('');
-    if (!createForm.name.trim() || !createForm.registrationNumber.trim() || !createForm.address.trim() ||
-        !createForm.city.trim() || !createForm.state.trim() || !createForm.pincode.trim()) {
+    const f = createForm;
+
+    // Required fields check
+    if (!f.name.trim() || !f.registrationNumber.trim() || !f.address.trim() ||
+        !f.city.trim() || !f.state.trim() || !f.pincode.trim()) {
       setCreateError('Please fill all required fields');
       return;
     }
-    if (!/^\d{6}$/.test(createForm.pincode)) {
-      setCreateError('Pincode must be 6 digits');
+
+    // Name length
+    if (f.name.trim().length < 2 || f.name.trim().length > 200) {
+      setCreateError('Hospital name must be 2–200 characters');
       return;
     }
+
+    // Registration number format
+    if (!/^[A-Za-z0-9\-/]+$/.test(f.registrationNumber.trim())) {
+      setCreateError('Registration number: only letters, numbers, hyphens, slashes');
+      return;
+    }
+    if (f.registrationNumber.trim().length > 50) {
+      setCreateError('Registration number too long (max 50)');
+      return;
+    }
+
+    // Address length
+    if (f.address.trim().length < 5 || f.address.trim().length > 500) {
+      setCreateError('Address must be 5–500 characters');
+      return;
+    }
+
+    // City: letters only
+    if (!/^[A-Za-z\s\-.]+$/.test(f.city.trim())) {
+      setCreateError('City must contain only letters');
+      return;
+    }
+
+    // State: letters only
+    if (!/^[A-Za-z\s\-.]+$/.test(f.state.trim())) {
+      setCreateError('State must contain only letters');
+      return;
+    }
+
+    // Pincode: exactly 6 digits
+    if (!/^\d{6}$/.test(f.pincode)) {
+      setCreateError('Pincode must be exactly 6 digits');
+      return;
+    }
+
+    // Phone: optional, but if filled must be valid Indian mobile
+    if (f.phone && f.phone.trim() !== '' && !/^[6-9]\d{9}$/.test(f.phone.trim())) {
+      setCreateError('Phone must be a valid 10-digit Indian mobile (starts 6-9)');
+      return;
+    }
+
+    // Email: optional, but if filled must be valid
+    if (f.email && f.email.trim() !== '') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(f.email.trim())) {
+        setCreateError('Please enter a valid email address');
+        return;
+      }
+    }
+
     createHospital.mutate(createForm, {
       onSuccess: () => {
         setShowCreateModal(false);
@@ -347,41 +402,41 @@ export default function HospitalsPage() {
               <div>
                 <label className="text-sm font-medium text-foreground">Hospital Name *</label>
                 <input value={createForm.name} onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="e.g. Apollo Hospital Chennai"
+                  placeholder="e.g. Apollo Hospital Chennai" maxLength={200}
                   className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
               </div>
 
               <div>
                 <label className="text-sm font-medium text-foreground">Registration Number *</label>
-                <input value={createForm.registrationNumber} onChange={(e) => setCreateForm((f) => ({ ...f, registrationNumber: e.target.value }))}
-                  placeholder="e.g. REG-MH-2024-0001"
+                <input value={createForm.registrationNumber} onChange={(e) => setCreateForm((f) => ({ ...f, registrationNumber: e.target.value.replace(/[^A-Za-z0-9\-/]/g, '') }))}
+                  placeholder="e.g. REG-MH-2024-0001" maxLength={50}
                   className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
               </div>
 
               <div>
                 <label className="text-sm font-medium text-foreground">Address *</label>
                 <textarea value={createForm.address} onChange={(e) => setCreateForm((f) => ({ ...f, address: e.target.value }))}
-                  placeholder="Full address" rows={2}
+                  placeholder="Full address" rows={2} maxLength={500}
                   className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none" />
               </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="text-sm font-medium text-foreground">City *</label>
-                  <input value={createForm.city} onChange={(e) => setCreateForm((f) => ({ ...f, city: e.target.value }))}
-                    placeholder="Chennai"
+                  <input value={createForm.city} onChange={(e) => setCreateForm((f) => ({ ...f, city: e.target.value.replace(/[^A-Za-z\s\-.]/g, '') }))}
+                    placeholder="Chennai" maxLength={100}
                     className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-foreground">State *</label>
-                  <input value={createForm.state} onChange={(e) => setCreateForm((f) => ({ ...f, state: e.target.value }))}
-                    placeholder="Tamil Nadu"
+                  <input value={createForm.state} onChange={(e) => setCreateForm((f) => ({ ...f, state: e.target.value.replace(/[^A-Za-z\s\-.]/g, '') }))}
+                    placeholder="Tamil Nadu" maxLength={100}
                     className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-foreground">Pincode *</label>
-                  <input value={createForm.pincode} onChange={(e) => setCreateForm((f) => ({ ...f, pincode: e.target.value }))}
-                    placeholder="600001" maxLength={6}
+                  <input value={createForm.pincode} onChange={(e) => setCreateForm((f) => ({ ...f, pincode: e.target.value.replace(/\D/g, '') }))}
+                    placeholder="600001" maxLength={6} inputMode="numeric" pattern="\d{6}"
                     className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
                 </div>
               </div>
@@ -389,14 +444,15 @@ export default function HospitalsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm font-medium text-foreground">Phone</label>
-                  <input value={createForm.phone} onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value }))}
-                    placeholder="+91 44 1234 5678"
+                  <input value={createForm.phone} onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value.replace(/\D/g, '') }))}
+                    placeholder="9876543210" type="tel" maxLength={10} inputMode="numeric" pattern="[6-9]\d{9}"
                     className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  <p className="text-xs text-muted-foreground mt-1">10-digit Indian mobile (starts 6-9)</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-foreground">Email</label>
                   <input value={createForm.email} onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
-                    placeholder="info@hospital.com"
+                    placeholder="info@hospital.com" type="email" maxLength={150}
                     className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
                 </div>
               </div>

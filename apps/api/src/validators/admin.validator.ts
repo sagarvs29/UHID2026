@@ -46,16 +46,27 @@ export const hospitalActionSchema = z.object({
 // ─── Hospital creation (super admin) ──────────────────────────────────────────
 
 export const createHospitalSchema = z.object({
-  name:               z.string().min(2, 'Hospital name is required').max(200).trim(),
-  registrationNumber: z.string().min(2, 'Registration number is required').max(50).trim(),
-  address:            z.string().min(5, 'Address is required').max(500).trim(),
-  city:               z.string().min(2, 'City is required').max(100).trim(),
-  state:              z.string().min(2, 'State is required').max(100).trim(),
-  pincode:            z.string().regex(/^\d{6}$/, 'Pincode must be 6 digits'),
-  phone:              z.string().max(15).optional().or(z.literal('')),
-  email:              z.string().email('Invalid email').optional().or(z.literal('')),
+  name:               z.string().min(2, 'Hospital name is required').max(200, 'Name too long (max 200)').trim(),
+  registrationNumber: z.string().min(2, 'Registration number is required').max(50, 'Registration number too long (max 50)')
+                        .regex(/^[A-Za-z0-9\-\/]+$/, 'Only letters, numbers, hyphens, slashes allowed')
+                        .trim(),
+  address:            z.string().min(5, 'Address must be at least 5 characters').max(500, 'Address too long (max 500)').trim(),
+  city:               z.string().min(2, 'City is required').max(100, 'City too long')
+                        .regex(/^[A-Za-z\s\-.]+$/, 'City must contain only letters')
+                        .trim(),
+  state:              z.string().min(2, 'State is required').max(100, 'State too long')
+                        .regex(/^[A-Za-z\s\-.]+$/, 'State must contain only letters')
+                        .trim(),
+  pincode:            z.string().regex(/^\d{6}$/, 'Pincode must be exactly 6 digits'),
+  phone:              z.string()
+                        .regex(/^[6-9]\d{9}$/, 'Invalid Indian mobile (10 digits, starts 6-9)')
+                        .optional()
+                        .or(z.literal('')),
+  email:              z.string().email('Invalid email address').max(150, 'Email too long')
+                        .optional()
+                        .or(z.literal('')),
   isNABH:             z.boolean().default(false),
-  specialties:        z.array(z.string().max(100)).default([]),
+  specialties:        z.array(z.string().max(100)).max(20, 'Max 20 specialties').default([]),
 });
 
 export type VerifyStaffInput     = z.infer<typeof verifyStaffSchema>;
