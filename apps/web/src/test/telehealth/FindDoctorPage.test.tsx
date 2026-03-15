@@ -44,7 +44,7 @@ describe('FindDoctorPage', () => {
   it('shows empty state when no doctors returned', async () => {
     server.use(
       http.get('/api/v1/hospital/doctors', () =>
-        HttpResponse.json({ total: 0, page: 1, limit: 12, totalPages: 0, doctors: [] })
+        HttpResponse.json({ success: true, data: { total: 0, page: 1, limit: 12, totalPages: 0, doctors: [] } })
       )
     );
     renderPage();
@@ -88,7 +88,7 @@ describe('FindDoctorPage', () => {
   it('shows no slots message when no availability', async () => {
     server.use(
       http.get('/api/v1/hospital/doctors/:id/slots', () =>
-        HttpResponse.json({ ...mockSlotsResponse, slots: [] })
+        HttpResponse.json({ success: true, data: { ...mockSlotsResponse, slots: [] } })
       )
     );
     renderPage();

@@ -36,8 +36,8 @@ export function useDoctorSearch(filters: DoctorSearchFilters = {}) {
       Object.entries(filters).forEach(([k, v]) => {
         if (v !== undefined && v !== '') params.set(k, String(v));
       });
-      const { data } = await api.get<DoctorsResponse>(`/hospital/doctors?${params}`);
-      return data;
+      const { data } = await api.get<{ success: boolean; data: DoctorsResponse }>(`/hospital/doctors?${params}`);
+      return data.data;
     },
     staleTime: 60_000,
   });
@@ -52,10 +52,10 @@ export function useDoctorSlots(doctorId: string, from?: string, to?: string) {
       const params = new URLSearchParams();
       if (from) params.set('from', from);
       if (to)   params.set('to', to);
-      const { data } = await api.get<SlotsResponse>(
+      const { data } = await api.get<{ success: boolean; data: SlotsResponse }>(
         `/hospital/doctors/${doctorId}/slots?${params}`,
       );
-      return data;
+      return data.data;
     },
     enabled: !!doctorId,
     staleTime: 30_000,
@@ -68,8 +68,8 @@ export function useBookAppointment() {
   const qc = useQueryClient();
   return useMutation<BookAppointmentResult, Error, BookAppointmentInput>({
     mutationFn: async (input) => {
-      const { data } = await api.post<BookAppointmentResult>('/hospital/appointments', input);
-      return data;
+      const { data } = await api.post<{ success: boolean; data: BookAppointmentResult }>('/hospital/appointments', input);
+      return data.data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: telehealthKeys.all });
@@ -87,8 +87,8 @@ export function useAppointments(filters: AppointmentListFilters = {}) {
       Object.entries(filters).forEach(([k, v]) => {
         if (v !== undefined && v !== '') params.set(k, String(v));
       });
-      const { data } = await api.get<AppointmentsResponse>(`/hospital/appointments?${params}`);
-      return data;
+      const { data } = await api.get<{ success: boolean; data: AppointmentsResponse }>(`/hospital/appointments?${params}`);
+      return data.data;
     },
     staleTime: 30_000,
   });
@@ -100,11 +100,11 @@ export function useCancelAppointment() {
   const qc = useQueryClient();
   return useMutation<{ message: string }, Error, { appointmentId: string; reason: string }>({
     mutationFn: async ({ appointmentId, reason }) => {
-      const { data } = await api.patch<{ message: string }>(
+      const { data } = await api.patch<{ success: boolean; data: { message: string } }>(
         `/hospital/appointments/${appointmentId}/cancel`,
         { reason },
       );
-      return data;
+      return data.data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: telehealthKeys.all });
@@ -118,10 +118,10 @@ export function useJitsiToken(appointmentId: string | null) {
   return useQuery<JitsiTokenResult>({
     queryKey: telehealthKeys.jitsiToken(appointmentId ?? ''),
     queryFn: async () => {
-      const { data } = await api.get<JitsiTokenResult>(
+      const { data } = await api.get<{ success: boolean; data: JitsiTokenResult }>(
         `/hospital/appointments/join/${appointmentId}`,
       );
-      return data;
+      return data.data;
     },
     enabled: !!appointmentId,
     staleTime: 60_000,
@@ -139,11 +139,11 @@ export function useSubmitReview() {
     { appointmentId: string; rating: number; comment?: string; isAnonymous?: boolean }
   >({
     mutationFn: async ({ appointmentId, ...body }) => {
-      const { data } = await api.post<{ message: string }>(
+      const { data } = await api.post<{ success: boolean; data: { message: string } }>(
         `/hospital/appointments/${appointmentId}/review`,
         body,
       );
-      return data;
+      return data.data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: telehealthKeys.all });

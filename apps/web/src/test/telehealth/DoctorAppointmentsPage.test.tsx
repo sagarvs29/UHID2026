@@ -57,7 +57,7 @@ describe('DoctorAppointmentsPage', () => {
   it('shows empty state when no upcoming appointments', async () => {
     server.use(
       http.get('/api/v1/hospital/appointments', () =>
-        HttpResponse.json({ total: 0, page: 1, limit: 10, totalPages: 0, appointments: [] })
+        HttpResponse.json({ success: true, data: { total: 0, page: 1, limit: 10, totalPages: 0, appointments: [] } })
       )
     );
     renderPage();

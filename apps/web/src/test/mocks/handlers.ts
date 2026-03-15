@@ -1092,51 +1092,51 @@ export const handlers = [
 
   // GET /api/v1/hospital/doctors
   http.get('/api/v1/hospital/doctors', () => {
-    return HttpResponse.json(mockDoctorsResponse);
+    return HttpResponse.json({ success: true, data: mockDoctorsResponse });
   }),
 
   // GET /api/v1/hospital/doctors/:id/slots
   http.get('/api/v1/hospital/doctors/:id/slots', () => {
-    return HttpResponse.json(mockSlotsResponse);
+    return HttpResponse.json({ success: true, data: mockSlotsResponse });
   }),
 
   // POST /api/v1/hospital/appointments
   http.post('/api/v1/hospital/appointments', () => {
-    return HttpResponse.json(mockBookResult, { status: 201 });
+    return HttpResponse.json({ success: true, data: mockBookResult }, { status: 201 });
   }),
 
   // GET /api/v1/hospital/appointments
   http.get('/api/v1/hospital/appointments', () => {
-    return HttpResponse.json(mockAppointmentsResponse);
+    return HttpResponse.json({ success: true, data: mockAppointmentsResponse });
   }),
 
   // PATCH /api/v1/hospital/appointments/:id/cancel
   http.patch('/api/v1/hospital/appointments/:id/cancel', () => {
-    return HttpResponse.json({ message: 'Appointment cancelled.' });
+    return HttpResponse.json({ success: true, data: { message: 'Appointment cancelled.' } });
   }),
 
   // GET /api/v1/hospital/appointments/join/:id
   http.get('/api/v1/hospital/appointments/join/:id', () => {
-    return HttpResponse.json(mockJitsiToken);
+    return HttpResponse.json({ success: true, data: mockJitsiToken });
   }),
 
   // POST /api/v1/hospital/appointments/:id/review
   http.post('/api/v1/hospital/appointments/:id/review', () => {
-    return HttpResponse.json({ message: 'Review submitted.' }, { status: 201 });
+    return HttpResponse.json({ success: true, data: { message: 'Review submitted.' } }, { status: 201 });
   }),
 
   // GET /api/v1/notifications
   http.get('/api/v1/notifications', () => {
-    return HttpResponse.json(mockNotificationsResponse);
+    return HttpResponse.json({ success: true, data: mockNotificationsResponse });
   }),
 
   // PATCH /api/v1/notifications/read-all
   http.patch('/api/v1/notifications/read-all', () => {
-    return HttpResponse.json({ message: 'All notifications marked as read.', updatedCount: 2 });
+    return HttpResponse.json({ success: true, data: { message: 'All notifications marked as read.', updatedCount: 2 } });
   }),
 
   // PATCH /api/v1/notifications/:id/read
   http.patch('/api/v1/notifications/:id/read', () => {
-    return HttpResponse.json({ message: 'Notification marked as read.' });
+    return HttpResponse.json({ success: true, data: { message: 'Notification marked as read.' } });
   }),
 ];

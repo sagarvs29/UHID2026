@@ -23,8 +23,8 @@ export function useNotifications(unreadOnly = false, limit = 20) {
         unreadOnly: String(unreadOnly),
         limit:      String(limit),
       });
-      const { data } = await api.get<NotificationsResponse>(`/notifications?${params}`);
-      return data;
+      const { data } = await api.get<{ success: boolean; data: NotificationsResponse }>(`/notifications?${params}`);
+      return data.data;
     },
     staleTime: 30_000,
     // Poll every 60 s so the bell badge stays up to date
@@ -60,10 +60,10 @@ export function useMarkAllRead() {
   const qc = useQueryClient();
   return useMutation<{ message: string; updatedCount: number }, Error>({
     mutationFn: async () => {
-      const { data } = await api.patch<{ message: string; updatedCount: number }>(
+      const { data } = await api.patch<{ success: boolean; data: { message: string; updatedCount: number } }>(
         '/notifications/read-all',
       );
-      return data;
+      return data.data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: notificationKeys.all });
@@ -77,10 +77,10 @@ export function useMarkOneRead() {
   const qc = useQueryClient();
   return useMutation<{ message: string }, Error, string>({
     mutationFn: async (notificationId) => {
-      const { data } = await api.patch<{ message: string }>(
+      const { data } = await api.patch<{ success: boolean; data: { message: string } }>(
         `/notifications/${notificationId}/read`,
       );
-      return data;
+      return data.data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: notificationKeys.all });

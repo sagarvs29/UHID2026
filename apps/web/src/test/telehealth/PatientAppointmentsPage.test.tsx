@@ -57,7 +57,7 @@ describe('PatientAppointmentsPage', () => {
   it('shows empty state for upcoming tab when no data', async () => {
     server.use(
       http.get('/api/v1/hospital/appointments', () =>
-        HttpResponse.json({ total: 0, page: 1, limit: 10, totalPages: 0, appointments: [] })
+        HttpResponse.json({ success: true, data: { total: 0, page: 1, limit: 10, totalPages: 0, appointments: [] } })
       )
     );
     renderPage();
@@ -113,7 +113,7 @@ describe('PatientAppointmentsPage', () => {
   it('shows Leave Review button for COMPLETED appointment', async () => {
     server.use(
       http.get('/api/v1/hospital/appointments', () =>
-        HttpResponse.json({
+        HttpResponse.json({ success: true, data: {
           total: 1, page: 1, limit: 10, totalPages: 1,
           appointments: [{ ...{
             id: 'appt_completed',
@@ -129,7 +129,7 @@ describe('PatientAppointmentsPage', () => {
             completedAt: new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString(),
             cancelReason: null,
           }}],
-        })
+        }})
       )
     );
     renderPage();
