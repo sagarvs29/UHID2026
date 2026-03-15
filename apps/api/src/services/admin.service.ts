@@ -504,6 +504,68 @@ export async function listHospitals() {
   }));
 }
 
+// ─── Super admin: create hospital ────────────────────────────────────────────
+
+export async function createHospital(
+  actorUserId: string,
+  data: {
+    name: string;
+    registrationNumber: string;
+    address: string;
+    city: string;
+    state: string;
+    pincode: string;
+    phone?: string;
+    email?: string;
+    isNABH?: boolean;
+    specialties?: string[];
+  },
+) {
+  // Check unique registration number
+  const existing = await prisma.hospital.findUnique({
+    where: { registrationNumber: data.registrationNumber },
+  });
+  if (existing) httpError('A hospital with this registration number already exists', 409);
+
+  const hospital = await prisma.hospital.create({
+    data: {
+      name:               data.name,
+      registrationNumber: data.registrationNumber,
+      address:            data.address,
+      city:               data.city,
+      state:              data.state,
+      pincode:            data.pincode,
+      phone:              data.phone || null,
+      email:              data.email || null,
+      isNABH:             data.isNABH ?? false,
+      specialties:        data.specialties ?? [],
+      isVerified:         true,     // Super Admin created → auto-verified
+      verifiedAt:         new Date(),
+    },
+  });
+
+  await writeAuditLog({
+    actorId:    actorUserId,
+    actorRole:  Role.SUPER_ADMIN,
+    action:     AuditAction.HOSPITAL_VERIFIED,
+    severity:   AuditSeverity.HIGH,
+    targetId:   hospital.id,
+    targetType: 'Hospital',
+    metadata:   { method: 'CREATED_BY_SUPER_ADMIN', name: data.name },
+  });
+
+  logger.info(`[Admin] Super admin created hospital: ${hospital.id} — ${data.name}`);
+
+  return {
+    id:                 hospital.id,
+    name:               hospital.name,
+    registrationNumber: hospital.registrationNumber,
+    city:               hospital.city,
+    state:              hospital.state,
+    isVerified:         hospital.isVerified,
+  };
+}
+
 // ─── Super admin: hospital action ────────────────────────────────────────────
 
 export async function hospitalAction(

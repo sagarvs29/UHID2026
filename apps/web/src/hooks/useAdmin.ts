@@ -158,6 +158,34 @@ export function useHospitalAction() {
   });
 }
 
+// ─── POST /admin/super/hospitals ─────────────────────────────────────────────
+
+export interface CreateHospitalInput {
+  name:               string;
+  registrationNumber: string;
+  address:            string;
+  city:               string;
+  state:              string;
+  pincode:            string;
+  phone?:             string;
+  email?:             string;
+  isNABH?:            boolean;
+  specialties?:       string[];
+}
+
+export function useCreateHospital() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: CreateHospitalInput) => {
+      const res = await api.post('/admin/super/hospitals', data);
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: adminKeys.hospitals() });
+    },
+  });
+}
+
 // ─── GET /admin/super/analytics ──────────────────────────────────────────────
 
 export function usePlatformAnalytics() {

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useHospitalList, useHospitalAction } from '@/hooks/useAdmin';
+import { useHospitalList, useHospitalAction, useCreateHospital } from '@/hooks/useAdmin';
+import type { CreateHospitalInput } from '@/hooks/useAdmin';
 import {
   Hospital,
   Search,
@@ -11,11 +12,14 @@ import {
   Calendar,
   ShieldCheck,
   AlertTriangle,
+  Plus,
+  X,
 } from 'lucide-react';
 
 export default function HospitalsPage() {
   const { data: hospitals = [], isLoading } = useHospitalList();
   const hospitalAction = useHospitalAction();
+  const createHospital = useCreateHospital();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'verified' | 'pending'>('all');
   const [actionModal, setActionModal] = useState<{
@@ -23,6 +27,12 @@ export default function HospitalsPage() {
     action: 'VERIFY' | 'SUSPEND';
   } | null>(null);
   const [notes, setNotes] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState<CreateHospitalInput>({
+    name: '', registrationNumber: '', address: '', city: '', state: '', pincode: '',
+    phone: '', email: '', isNABH: false, specialties: [],
+  });
+  const [createError, setCreateError] = useState('');
 
   const filtered = hospitals
     .filter((h) => {
@@ -49,6 +59,30 @@ export default function HospitalsPage() {
     );
   };
 
+  const handleCreateHospital = () => {
+    setCreateError('');
+    if (!createForm.name.trim() || !createForm.registrationNumber.trim() || !createForm.address.trim() ||
+        !createForm.city.trim() || !createForm.state.trim() || !createForm.pincode.trim()) {
+      setCreateError('Please fill all required fields');
+      return;
+    }
+    if (!/^\d{6}$/.test(createForm.pincode)) {
+      setCreateError('Pincode must be 6 digits');
+      return;
+    }
+    createHospital.mutate(createForm, {
+      onSuccess: () => {
+        setShowCreateModal(false);
+        setCreateForm({ name: '', registrationNumber: '', address: '', city: '', state: '', pincode: '', phone: '', email: '', isNABH: false, specialties: [] });
+        setCreateError('');
+      },
+      onError: (err) => {
+        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Failed to create hospital';
+        setCreateError(msg);
+      },
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -60,14 +94,23 @@ export default function HospitalsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Hospital className="w-6 h-6 text-primary" />
-          Hospital Management
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Verify, suspend, or manage all registered hospitals on the UHID platform.
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Hospital className="w-6 h-6 text-primary" />
+            Hospital Management
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Create, verify, suspend, or manage all hospitals on the UHID platform.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          Add Hospital
+        </button>
       </div>
 
       {/* Stats row */}
@@ -269,6 +312,114 @@ export default function HospitalsPage() {
                 }`}
               >
                 {hospitalAction.isPending ? 'Processing…' : actionModal.action === 'VERIFY' ? 'Verify Hospital' : 'Suspend Hospital'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Hospital modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-card rounded-2xl border shadow-xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <Plus className="w-5 h-5 text-primary" />
+                Add New Hospital
+              </h2>
+              <button onClick={() => { setShowCreateModal(false); setCreateError(''); }}
+                className="p-1 rounded-lg hover:bg-muted transition-colors">
+                <X className="w-5 h-5 text-muted-foreground" />
+              </button>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              Hospital will be auto-verified. Doctors and staff can register under it immediately.
+            </p>
+
+            {createError && (
+              <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+                {createError}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-foreground">Hospital Name *</label>
+                <input value={createForm.name} onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="e.g. Apollo Hospital Chennai"
+                  className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-foreground">Registration Number *</label>
+                <input value={createForm.registrationNumber} onChange={(e) => setCreateForm((f) => ({ ...f, registrationNumber: e.target.value }))}
+                  placeholder="e.g. REG-MH-2024-0001"
+                  className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-foreground">Address *</label>
+                <textarea value={createForm.address} onChange={(e) => setCreateForm((f) => ({ ...f, address: e.target.value }))}
+                  placeholder="Full address" rows={2}
+                  className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none" />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-sm font-medium text-foreground">City *</label>
+                  <input value={createForm.city} onChange={(e) => setCreateForm((f) => ({ ...f, city: e.target.value }))}
+                    placeholder="Chennai"
+                    className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground">State *</label>
+                  <input value={createForm.state} onChange={(e) => setCreateForm((f) => ({ ...f, state: e.target.value }))}
+                    placeholder="Tamil Nadu"
+                    className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground">Pincode *</label>
+                  <input value={createForm.pincode} onChange={(e) => setCreateForm((f) => ({ ...f, pincode: e.target.value }))}
+                    placeholder="600001" maxLength={6}
+                    className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium text-foreground">Phone</label>
+                  <input value={createForm.phone} onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value }))}
+                    placeholder="+91 44 1234 5678"
+                    className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground">Email</label>
+                  <input value={createForm.email} onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
+                    placeholder="info@hospital.com"
+                    className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={createForm.isNABH}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, isNABH: e.target.checked }))}
+                    className="rounded border-gray-300" />
+                  <span className="text-sm font-medium text-foreground">NABH Accredited</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-3 border-t">
+              <button onClick={() => { setShowCreateModal(false); setCreateError(''); }}
+                className="px-4 py-2 text-sm rounded-lg border hover:bg-muted/40 transition-colors">
+                Cancel
+              </button>
+              <button onClick={handleCreateHospital}
+                disabled={createHospital.isPending}
+                className="px-4 py-2 text-sm rounded-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50">
+                {createHospital.isPending ? 'Creating…' : 'Create Hospital'}
               </button>
             </div>
           </div>

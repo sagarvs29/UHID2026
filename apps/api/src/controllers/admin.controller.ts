@@ -6,6 +6,7 @@ import {
   deactivateStaffSchema,
   auditLogQuerySchema,
   hospitalActionSchema,
+  createHospitalSchema,
 } from '@/validators/admin.validator';
 import * as adminService from '@/services/admin.service';
 
@@ -119,6 +120,16 @@ export const getPlatformAnalytics = [
     try {
       const data = await adminService.getPlatformAnalytics();
       res.json({ success: true, data });
+    } catch (e) { next(e); }
+  },
+];
+
+export const createHospital = [
+  validate(createHospitalSchema),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const data = await adminService.createHospital(req.user!.userId, req.body);
+      res.status(201).json({ success: true, data });
     } catch (e) { next(e); }
   },
 ];

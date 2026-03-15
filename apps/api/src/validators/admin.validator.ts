@@ -43,7 +43,23 @@ export const hospitalActionSchema = z.object({
   notes:  z.string().optional(),
 });
 
-export type VerifyStaffInput    = z.infer<typeof verifyStaffSchema>;
+// ─── Hospital creation (super admin) ──────────────────────────────────────────
+
+export const createHospitalSchema = z.object({
+  name:               z.string().min(2, 'Hospital name is required').max(200).trim(),
+  registrationNumber: z.string().min(2, 'Registration number is required').max(50).trim(),
+  address:            z.string().min(5, 'Address is required').max(500).trim(),
+  city:               z.string().min(2, 'City is required').max(100).trim(),
+  state:              z.string().min(2, 'State is required').max(100).trim(),
+  pincode:            z.string().regex(/^\d{6}$/, 'Pincode must be 6 digits'),
+  phone:              z.string().max(15).optional().or(z.literal('')),
+  email:              z.string().email('Invalid email').optional().or(z.literal('')),
+  isNABH:             z.boolean().default(false),
+  specialties:        z.array(z.string().max(100)).default([]),
+});
+
+export type VerifyStaffInput     = z.infer<typeof verifyStaffSchema>;
 export type DeactivateStaffInput = z.infer<typeof deactivateStaffSchema>;
-export type AuditLogQuery       = z.infer<typeof auditLogQuerySchema>;
-export type HospitalActionInput = z.infer<typeof hospitalActionSchema>;
+export type AuditLogQuery        = z.infer<typeof auditLogQuerySchema>;
+export type HospitalActionInput  = z.infer<typeof hospitalActionSchema>;
+export type CreateHospitalInput  = z.infer<typeof createHospitalSchema>;

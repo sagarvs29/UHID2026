@@ -40,6 +40,9 @@ const superAdminOnly = authorize('SUPER_ADMIN');
 // GET  /admin/super/hospitals
 router.get('/super/hospitals', superAdminOnly, ...adminCtrl.listHospitals);
 
+// POST /admin/super/hospitals
+router.post('/super/hospitals', superAdminOnly, ...adminCtrl.createHospital);
+
 // PATCH /admin/super/hospitals/:id/verify
 router.patch('/super/hospitals/:id/verify', superAdminOnly, ...adminCtrl.hospitalAction);
 
