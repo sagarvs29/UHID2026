@@ -196,6 +196,59 @@ export async function sendApprovalPendingEmail(
 }
 
 // ─── Consent OTP Email ────────────────────────────────────────────────────────
+
+/**
+ * Hospital Admin credentials email — sent when Super Admin creates a hospital
+ */
+export async function sendHospitalAdminCredentialsEmail(
+  to: string,
+  adminName: string,
+  hospitalName: string,
+  tempPassword: string,
+): Promise<void> {
+  const loginUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5173'}/login`;
+  await transporter.sendMail({
+    from: `"UHID Health" <${process.env.SMTP_USER}>`,
+    to,
+    subject: `UHID — You are the Admin of ${hospitalName}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto;">
+        <h2 style="color: #2563EB;">Hospital Admin Account Created 🏥</h2>
+        <p>Hello <strong>${adminName}</strong>,</p>
+        <p>You have been assigned as the <strong>Hospital Admin</strong> for <strong>${hospitalName}</strong> on the UHID platform.</p>
+
+        <div style="background: #EFF6FF; border: 2px solid #2563EB; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <p style="margin: 0 0 12px 0; font-size: 14px; color: #374151;"><strong>Your login credentials:</strong></p>
+          <table style="width: 100%; font-size: 14px; color: #1E3A5F;">
+            <tr><td style="padding: 4px 0; color: #6B7280;">Email:</td><td style="padding: 4px 0; font-weight: bold;">${to}</td></tr>
+            <tr><td style="padding: 4px 0; color: #6B7280;">Temporary Password:</td><td style="padding: 4px 0; font-weight: bold; letter-spacing: 1px;">${tempPassword}</td></tr>
+          </table>
+        </div>
+
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${loginUrl}" style="background: #2563EB; color: white; padding: 12px 32px; border-radius: 6px; text-decoration: none; font-weight: bold;">Login Now</a>
+        </div>
+
+        <div style="background: #FEF3C7; border: 1px solid #D97706; border-radius: 8px; padding: 14px; margin: 16px 0;">
+          <p style="margin: 0; color: #92400E; font-size: 13px;">
+            ⚠️ <strong>Important:</strong> Please change your password after your first login for security.
+          </p>
+        </div>
+
+        <p style="color: #6B7280; font-size: 14px;">As Hospital Admin you can:</p>
+        <ul style="color: #374151; font-size: 13px; padding-left: 20px;">
+          <li>Verify / reject doctors and staff who register under your hospital</li>
+          <li>View hospital analytics and audit logs</li>
+          <li>Manage hospital security settings</li>
+        </ul>
+
+        <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 20px 0;" />
+        <p style="color: #9CA3AF; font-size: 12px;">UHID — UniHealth ID Platform</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendConsentOtpEmail(
   to: string,
   patientName: string,

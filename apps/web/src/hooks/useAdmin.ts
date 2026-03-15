@@ -171,6 +171,11 @@ export interface CreateHospitalInput {
   email?:             string;
   isNABH?:            boolean;
   specialties?:       string[];
+  // Hospital Admin details
+  adminFirstName:     string;
+  adminLastName:      string;
+  adminEmail:         string;
+  adminPhone:         string;
 }
 
 export function useCreateHospital() {

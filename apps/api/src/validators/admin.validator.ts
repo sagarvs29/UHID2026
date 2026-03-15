@@ -67,6 +67,18 @@ export const createHospitalSchema = z.object({
                         .or(z.literal('')),
   isNABH:             z.boolean().default(false),
   specialties:        z.array(z.string().max(100)).max(20, 'Max 20 specialties').default([]),
+
+  // Hospital Admin details — created alongside the hospital
+  adminFirstName:     z.string().min(2, 'Admin first name is required').max(80, 'Name too long')
+                        .regex(/^[A-Za-z\s\-.]+$/, 'Name must contain only letters')
+                        .trim(),
+  adminLastName:      z.string().min(1, 'Admin last name is required').max(80, 'Name too long')
+                        .regex(/^[A-Za-z\s\-.]+$/, 'Name must contain only letters')
+                        .trim(),
+  adminEmail:         z.string().email('Invalid admin email').max(150, 'Email too long').trim(),
+  adminPhone:         z.string()
+                        .regex(/^[6-9]\d{9}$/, 'Invalid Indian mobile (10 digits, starts 6-9)')
+                        .trim(),
 });
 
 export type VerifyStaffInput     = z.infer<typeof verifyStaffSchema>;

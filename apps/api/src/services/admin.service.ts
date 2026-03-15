@@ -1,11 +1,14 @@
 import prisma from '@/lib/prisma';
 import logger from '@/lib/logger';
+import argon2 from 'argon2';
+import crypto from 'crypto';
 import {
   AuditAction,
   AuditSeverity,
   Role,
   Prisma,
 } from '@prisma/client';
+import { sendHospitalAdminCredentialsEmail } from '@/lib/email';
 import type { AuditLogQuery } from '@/validators/admin.validator';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -519,6 +522,10 @@ export async function createHospital(
     email?: string;
     isNABH?: boolean;
     specialties?: string[];
+    adminFirstName: string;
+    adminLastName: string;
+    adminEmail: string;
+    adminPhone: string;
   },
 ) {
   // Check unique registration number
@@ -527,43 +534,130 @@ export async function createHospital(
   });
   if (existing) httpError('A hospital with this registration number already exists', 409);
 
-  const hospital = await prisma.hospital.create({
-    data: {
-      name:               data.name,
-      registrationNumber: data.registrationNumber,
-      address:            data.address,
-      city:               data.city,
-      state:              data.state,
-      pincode:            data.pincode,
-      phone:              data.phone || null,
-      email:              data.email || null,
-      isNABH:             data.isNABH ?? false,
-      specialties:        data.specialties ?? [],
-      isVerified:         true,     // Super Admin created → auto-verified
-      verifiedAt:         new Date(),
-    },
+  // Check admin email not already used
+  const existingUser = await prisma.user.findUnique({
+    where: { email: data.adminEmail },
+  });
+  if (existingUser) httpError('This admin email is already registered on the platform', 409);
+
+  // Generate secure temporary password: 12 chars, meets complexity requirements
+  const tempPassword = generateTempPassword();
+  const passwordHash = await argon2.hash(tempPassword, {
+    type: argon2.argon2id,
+    memoryCost: 65536,
+    timeCost: 3,
+    parallelism: 1,
   });
 
+  // Create hospital + admin user + admin profile in a transaction
+  const result = await prisma.$transaction(async (tx) => {
+    // 1. Create hospital
+    const hospital = await tx.hospital.create({
+      data: {
+        name:               data.name,
+        registrationNumber: data.registrationNumber,
+        address:            data.address,
+        city:               data.city,
+        state:              data.state,
+        pincode:            data.pincode,
+        phone:              data.phone || null,
+        email:              data.email || null,
+        isNABH:             data.isNABH ?? false,
+        specialties:        data.specialties ?? [],
+        isVerified:         true,
+        verifiedAt:         new Date(),
+      },
+    });
+
+    // 2. Create admin user
+    const adminUser = await tx.user.create({
+      data: {
+        email:           data.adminEmail,
+        passwordHash,
+        role:            Role.HOSPITAL_ADMIN,
+        isEmailVerified: true,  // Admin created by Super Admin → trusted
+        isActive:        true,
+      },
+    });
+
+    // 3. Create HospitalAdmin profile
+    await tx.hospitalAdmin.create({
+      data: {
+        userId:     adminUser.id,
+        hospitalId: hospital.id,
+        firstName:  data.adminFirstName,
+        lastName:   data.adminLastName,
+      },
+    });
+
+    return { hospital, adminUser };
+  });
+
+  // Audit log
   await writeAuditLog({
     actorId:    actorUserId,
     actorRole:  Role.SUPER_ADMIN,
     action:     AuditAction.HOSPITAL_VERIFIED,
     severity:   AuditSeverity.HIGH,
-    targetId:   hospital.id,
+    targetId:   result.hospital.id,
     targetType: 'Hospital',
-    metadata:   { method: 'CREATED_BY_SUPER_ADMIN', name: data.name },
+    hospitalId: result.hospital.id,
+    metadata:   {
+      method: 'CREATED_BY_SUPER_ADMIN',
+      name: data.name,
+      adminEmail: data.adminEmail,
+      adminName: `${data.adminFirstName} ${data.adminLastName}`,
+    },
   });
 
-  logger.info(`[Admin] Super admin created hospital: ${hospital.id} — ${data.name}`);
+  // Send credentials email (fire-and-forget, don't fail the request)
+  sendHospitalAdminCredentialsEmail(
+    data.adminEmail,
+    `${data.adminFirstName} ${data.adminLastName}`,
+    data.name,
+    tempPassword,
+  ).catch((e) => logger.error('[Email] Failed to send admin credentials email', e));
+
+  logger.info(`[Admin] Super admin created hospital: ${result.hospital.id} — ${data.name} | Admin: ${data.adminEmail}`);
 
   return {
-    id:                 hospital.id,
-    name:               hospital.name,
-    registrationNumber: hospital.registrationNumber,
-    city:               hospital.city,
-    state:              hospital.state,
-    isVerified:         hospital.isVerified,
+    id:                 result.hospital.id,
+    name:               result.hospital.name,
+    registrationNumber: result.hospital.registrationNumber,
+    city:               result.hospital.city,
+    state:              result.hospital.state,
+    isVerified:         result.hospital.isVerified,
+    adminEmail:         data.adminEmail,
+    adminName:          `${data.adminFirstName} ${data.adminLastName}`,
   };
+}
+
+/**
+ * Generate a secure temporary password that meets our password policy:
+ * - At least 12 characters
+ * - Uppercase + lowercase + digit + special char
+ */
+function generateTempPassword(): string {
+  const upper   = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lower   = 'abcdefghjkmnpqrstuvwxyz';
+  const digits  = '23456789';
+  const special = '@$!%*?&';
+  const all     = upper + lower + digits + special;
+
+  // Guarantee at least one of each category
+  let pw = '';
+  pw += upper[crypto.randomInt(upper.length)];
+  pw += lower[crypto.randomInt(lower.length)];
+  pw += digits[crypto.randomInt(digits.length)];
+  pw += special[crypto.randomInt(special.length)];
+
+  // Fill remaining 8 chars
+  for (let i = 0; i < 8; i++) {
+    pw += all[crypto.randomInt(all.length)];
+  }
+
+  // Shuffle
+  return pw.split('').sort(() => crypto.randomInt(3) - 1).join('');
 }
 
 // ─── Super admin: hospital action ────────────────────────────────────────────

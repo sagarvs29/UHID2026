@@ -31,6 +31,7 @@ export default function HospitalsPage() {
   const [createForm, setCreateForm] = useState<CreateHospitalInput>({
     name: '', registrationNumber: '', address: '', city: '', state: '', pincode: '',
     phone: '', email: '', isNABH: false, specialties: [],
+    adminFirstName: '', adminLastName: '', adminEmail: '', adminPhone: '',
   });
   const [createError, setCreateError] = useState('');
 
@@ -120,15 +121,37 @@ export default function HospitalsPage() {
     if (f.email && f.email.trim() !== '') {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(f.email.trim())) {
-        setCreateError('Please enter a valid email address');
+        setCreateError('Please enter a valid hospital email address');
         return;
       }
+    }
+
+    // ─── Admin fields validation ──────────────────────────────
+    if (!f.adminFirstName.trim() || !f.adminLastName.trim() || !f.adminEmail.trim() || !f.adminPhone.trim()) {
+      setCreateError('Please fill all Hospital Admin fields');
+      return;
+    }
+
+    if (!/^[A-Za-z\s\-.]+$/.test(f.adminFirstName.trim()) || !/^[A-Za-z\s\-.]+$/.test(f.adminLastName.trim())) {
+      setCreateError('Admin name must contain only letters');
+      return;
+    }
+
+    const adminEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!adminEmailRegex.test(f.adminEmail.trim())) {
+      setCreateError('Please enter a valid admin email address');
+      return;
+    }
+
+    if (!/^[6-9]\d{9}$/.test(f.adminPhone.trim())) {
+      setCreateError('Admin phone must be a valid 10-digit Indian mobile (starts 6-9)');
+      return;
     }
 
     createHospital.mutate(createForm, {
       onSuccess: () => {
         setShowCreateModal(false);
-        setCreateForm({ name: '', registrationNumber: '', address: '', city: '', state: '', pincode: '', phone: '', email: '', isNABH: false, specialties: [] });
+        setCreateForm({ name: '', registrationNumber: '', address: '', city: '', state: '', pincode: '', phone: '', email: '', isNABH: false, specialties: [], adminFirstName: '', adminLastName: '', adminEmail: '', adminPhone: '' });
         setCreateError('');
       },
       onError: (err) => {
@@ -464,6 +487,49 @@ export default function HospitalsPage() {
                     className="rounded border-gray-300" />
                   <span className="text-sm font-medium text-foreground">NABH Accredited</span>
                 </label>
+              </div>
+
+              {/* Hospital Admin Section */}
+              <div className="border-t pt-4 mt-2">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
+                  <UserCog className="w-4 h-4 text-primary" />
+                  Hospital Admin Credentials
+                </h3>
+                <p className="text-xs text-muted-foreground mb-3">
+                  An admin account will be created and login credentials will be emailed to this person.
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-foreground">First Name *</label>
+                    <input value={createForm.adminFirstName} onChange={(e) => setCreateForm((f) => ({ ...f, adminFirstName: e.target.value.replace(/[^A-Za-z\s\-.]/g, '') }))}
+                      placeholder="Rajesh" maxLength={80}
+                      className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Last Name *</label>
+                    <input value={createForm.adminLastName} onChange={(e) => setCreateForm((f) => ({ ...f, adminLastName: e.target.value.replace(/[^A-Za-z\s\-.]/g, '') }))}
+                      placeholder="Kumar" maxLength={80}
+                      className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Admin Email *</label>
+                    <input value={createForm.adminEmail} onChange={(e) => setCreateForm((f) => ({ ...f, adminEmail: e.target.value }))}
+                      placeholder="admin@hospital.com" type="email" maxLength={150}
+                      className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                    <p className="text-xs text-muted-foreground mt-1">Login credentials will be sent here</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Admin Phone *</label>
+                    <input value={createForm.adminPhone} onChange={(e) => setCreateForm((f) => ({ ...f, adminPhone: e.target.value.replace(/\D/g, '') }))}
+                      placeholder="9876543210" type="tel" maxLength={10} inputMode="numeric"
+                      className="w-full mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                    <p className="text-xs text-muted-foreground mt-1">10-digit Indian mobile</p>
+                  </div>
+                </div>
               </div>
             </div>
 
