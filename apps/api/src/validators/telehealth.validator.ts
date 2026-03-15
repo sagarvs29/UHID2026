@@ -63,7 +63,17 @@ export type SlotQueryInput = z.infer<typeof slotQuerySchema>;
 // ─── Appointment List Query ───────────────────────────────────────────────────
 
 export const appointmentListSchema = z.object({
-  status: AppointmentStatusEnum.optional(),
+  status: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val) return undefined;
+      const parts = val.split(',').map((s) => s.trim());
+      // Validate each part is a valid status
+      const valid = ['SCHEDULED', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
+      const filtered = parts.filter((p) => valid.includes(p));
+      return filtered.length ? filtered : undefined;
+    }),
   from:   z.string().datetime().optional(),
   to:     z.string().datetime().optional(),
   page:   z.coerce.number().int().positive().default(1),

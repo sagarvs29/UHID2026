@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma';
-import { AppointmentStatus, AppointmentType, NotificationType } from '@prisma/client';
+import { AppointmentStatus, AppointmentType, NotificationType, Prisma } from '@prisma/client';
 import { emitToUser } from '@/lib/socket';
 import { addDays, format, startOfDay, endOfDay, parseISO, isWithinInterval, addMinutes } from 'date-fns';
 import type {
@@ -308,9 +308,15 @@ export async function listAppointments(
     ownerFilter = { doctorId: doctor.id };
   }
 
-  const where = {
+  const statusFilter = status
+    ? status.length === 1
+      ? { status: status[0] as AppointmentStatus }
+      : { status: { in: status as AppointmentStatus[] } }
+    : {};
+
+  const where: Prisma.AppointmentWhereInput = {
     ...ownerFilter,
-    ...(status && { status }),
+    ...statusFilter,
     ...(from   && { scheduledAt: { gte: new Date(from) } }),
     ...(to     && { scheduledAt: { lte: new Date(to)   } }),
   };

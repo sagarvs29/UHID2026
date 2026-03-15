@@ -80,6 +80,7 @@ interface AuthResponse {
   success: boolean;
   data: {
     user: AuthUser;
+    profile: Record<string, unknown>;
     tokens: {
       accessToken: string;
       refreshToken: string;
@@ -87,6 +88,8 @@ interface AuthResponse {
     // some endpoints return tokens at top-level data
     accessToken?: string;
     refreshToken?: string;
+    requiresApproval?: boolean;
+    requiresEmailVerification?: boolean;
   };
 }
 
@@ -112,10 +115,14 @@ export function getErrorMessage(err: unknown): string {
   return extractError(err);
 }
 
-function nameFromUser(user: AuthUser): string {
-  if (user.name) return user.name;
-  const parts = [user.firstName, user.lastName].filter(Boolean);
-  return parts.length ? parts.join(' ') : user.email.split('@')[0];
+function nameFromProfile(profile: Record<string, unknown>, email: string): string {
+  const firstName = profile.firstName as string | undefined;
+  const lastName  = profile.lastName  as string | undefined;
+  const companyName = profile.companyName as string | undefined;
+  const parts = [firstName, lastName].filter(Boolean);
+  if (parts.length) return parts.join(' ');
+  if (companyName) return companyName;
+  return email.split('@')[0];
 }
 
 // ─── Hooks ────────────────────────────────────────────────
@@ -129,7 +136,7 @@ export function useLogin() {
       return res.data;
     },
     onSuccess: (data) => {
-      const { user } = data.data;
+      const { user, profile } = data.data;
       const tokens = data.data.tokens ?? {
         accessToken: data.data.accessToken!,
         refreshToken: data.data.refreshToken!,
@@ -138,11 +145,11 @@ export function useLogin() {
         {
           userId: user.id,
           role: user.role as never,
-          name: nameFromUser(user),
+          name: nameFromProfile(profile ?? {}, user.email),
           email: user.email,
-          uhid: user.uhid,
+          uhid: (profile?.uhid as string) ?? null,
           isEmailVerified: user.isEmailVerified,
-          isPhoneVerified: user.isPhoneVerified,
+          isPhoneVerified: user.isPhoneVerified ?? false,
         },
         tokens.accessToken,
         tokens.refreshToken
@@ -161,7 +168,7 @@ export function useRegister() {
       return res.data;
     },
     onSuccess: (data) => {
-      const { user } = data.data;
+      const { user, profile } = data.data;
       const tokens = data.data.tokens ?? {
         accessToken: data.data.accessToken!,
         refreshToken: data.data.refreshToken!,
@@ -170,11 +177,11 @@ export function useRegister() {
         {
           userId: user.id,
           role: user.role as never,
-          name: nameFromUser(user),
+          name: nameFromProfile(profile ?? {}, user.email),
           email: user.email,
-          uhid: user.uhid,
+          uhid: (profile?.uhid as string) ?? null,
           isEmailVerified: user.isEmailVerified,
-          isPhoneVerified: user.isPhoneVerified,
+          isPhoneVerified: user.isPhoneVerified ?? false,
         },
         tokens.accessToken,
         tokens.refreshToken

@@ -47,10 +47,11 @@ export default function NotificationBell() {
   const [open, setOpen]   = useState(false);
   const containerRef      = useRef<HTMLDivElement>(null);
 
-  const { data, isLoading } = useNotifications(false, 20);
+  const { data, isLoading, isError } = useNotifications(false, 20);
   const { mutate: markAll,  isPending: markingAll }  = useMarkAllRead();
   const { mutate: markOne }  = useMarkOneRead();
 
+  const notifications = data?.notifications ?? [];
   const unreadCount = data?.unreadCount ?? 0;
 
   // Close on outside click
@@ -115,13 +116,18 @@ export default function NotificationBell() {
               <div className="flex justify-center py-8">
                 <Loader2 className="w-5 h-5 animate-spin text-primary" />
               </div>
-            ) : !data?.notifications.length ? (
+            ) : isError ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-2">
+                <Bell className="w-8 h-8 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">Unable to load notifications</p>
+              </div>
+            ) : !notifications.length ? (
               <div className="flex flex-col items-center justify-center py-10 gap-2">
                 <Bell className="w-8 h-8 text-muted-foreground" />
                 <p className="text-xs text-muted-foreground">No notifications yet</p>
               </div>
             ) : (
-              data.notifications.map((item) => (
+              notifications.map((item) => (
                 <NotificationRow
                   key={item.id}
                   item={item}

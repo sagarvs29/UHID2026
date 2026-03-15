@@ -3,9 +3,9 @@ import {
   User,
   Mail,
   Shield,
-  Calendar,
   Key,
   Info,
+  Hash,
 } from 'lucide-react';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -68,6 +68,9 @@ export default function ProfilePage() {
             { icon: User, label: 'Full Name', value: user?.name ?? '—' },
             { icon: Mail, label: 'Email', value: user?.email ?? '—' },
             { icon: Shield, label: 'Role', value: ROLE_LABELS[user?.role ?? ''] ?? user?.role ?? '—' },
+            ...(user?.role === 'PATIENT' && user?.uhid
+              ? [{ icon: Hash, label: 'UHID', value: user.uhid }]
+              : []),
             { icon: Key, label: 'User ID', value: user?.userId ? user.userId.slice(0, 12) + '…' : '—' },
           ].map(({ icon: Icon, label, value }) => (
             <div key={label} className="flex items-center justify-between rounded-lg bg-muted/30 px-4 py-3">
