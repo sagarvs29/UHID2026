@@ -194,7 +194,7 @@ export default function PatientRecordsPage() {
 
   const queryParams: GetRecordsParams = {
     ...params,
-    type: typeFilter || undefined,
+    type: (typeFilter || undefined) as GetRecordsParams['type'],
   };
 
   const { data, isLoading, isError, error } = useMyRecords(queryParams);

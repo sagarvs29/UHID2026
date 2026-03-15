@@ -306,7 +306,7 @@ export default function StaffPage() {
                 <tbody>
                   {filteredDoctors.map((doc) => (
                     <tr
-                      key={doc.id}
+                      key={doc.userId}
                       data-testid="active-staff-row"
                       className="border-b last:border-0 hover:bg-muted/20 transition-colors"
                     >
@@ -316,7 +316,7 @@ export default function StaffPage() {
                       <td className="px-4 py-3 text-right">
                         <button
                           data-testid="deactivate-btn"
-                          onClick={() => setDeactivateTarget({ userId: doc.id, name: doc.name })}
+                          onClick={() => setDeactivateTarget({ userId: doc.userId, name: doc.name })}
                           className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors ml-auto"
                         >
                           <UserMinus className="w-3 h-3" />
@@ -348,7 +348,7 @@ export default function StaffPage() {
                 <tbody>
                   {filteredStaff.map((s) => (
                     <tr
-                      key={s.id}
+                      key={s.userId}
                       data-testid="active-staff-row"
                       className="border-b last:border-0 hover:bg-muted/20 transition-colors"
                     >
@@ -358,7 +358,7 @@ export default function StaffPage() {
                       <td className="px-4 py-3 text-right">
                         <button
                           data-testid="deactivate-btn"
-                          onClick={() => setDeactivateTarget({ userId: s.id, name: s.name })}
+                          onClick={() => setDeactivateTarget({ userId: s.userId, name: s.name })}
                           className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors ml-auto"
                         >
                           <UserMinus className="w-3 h-3" />

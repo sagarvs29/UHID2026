@@ -20,7 +20,6 @@ import StaffDashboardPage from '@/pages/staff/DashboardPage';
 import AdminDashboardPage from '@/pages/admin/DashboardPage';
 import SuperAdminDashboardPage from '@/pages/superadmin/DashboardPage';
 import InsuranceDashboardPage from '@/pages/insurance/DashboardPage';
-import ComingSoonPage from '@/pages/ComingSoonPage';
 
 // Pages - Phase 2: Medical Records
 import PatientRecordsPage from '@/pages/patient/RecordsPage';
@@ -45,6 +44,35 @@ import AiSummaryPage from '@/pages/doctor/AiSummaryPage';
 // Pages - Phase 6: QR & Emergency
 import QrPage from '@/pages/patient/QrPage';
 import EmergencyPage from '@/pages/emergency/EmergencyPage';
+
+// Pages - Phase 7: Insurance
+import NewClaimPage from '@/pages/insurance/NewClaimPage';
+import ClaimDetailPage from '@/pages/insurance/ClaimDetailPage';
+
+// Pages - Phase 8: Admin Portal
+import AdminStaffPage from '@/pages/admin/StaffPage';
+import AdminAuditLogsPage from '@/pages/admin/AuditLogsPage';
+
+// Pages - Phase 9: Telehealth, Appointments & Notifications
+import FindDoctorPage from '@/pages/patient/FindDoctorPage';
+import PatientAppointmentsPage from '@/pages/patient/AppointmentsPage';
+import DoctorAppointmentsPage from '@/pages/doctor/AppointmentsPage';
+import VideoCallPage from '@/pages/appointment/VideoCallPage';
+
+// Pages - Replacing ComingSoon placeholders
+import ProfilePage from '@/pages/shared/ProfilePage';
+import SuperAdminHospitalsPage from '@/pages/superadmin/HospitalsPage';
+import SuperAdminUsersPage from '@/pages/superadmin/UsersPage';
+import SuperAdminInsurancePage from '@/pages/superadmin/InsuranceProvidersPage';
+import SuperAdminAnalyticsPage from '@/pages/superadmin/AnalyticsPage';
+import SuperAdminSettingsPage from '@/pages/superadmin/SettingsPage';
+import AdminDoctorsPage from '@/pages/admin/DoctorsPage';
+import AdminAnalyticsPage from '@/pages/admin/AnalyticsPage';
+import AdminHospitalProfilePage from '@/pages/admin/HospitalProfilePage';
+import AdminSecuritySettingsPage from '@/pages/admin/SecuritySettingsPage';
+import InsurancePendingClaimsPage from '@/pages/insurance/PendingClaimsPage';
+import InsuranceApprovedClaimsPage from '@/pages/insurance/ApprovedClaimsPage';
+import InsuranceAccessRequestsPage from '@/pages/insurance/AccessRequestsPage';
 
 const NotFoundPage = () => (
   <div className="flex min-h-screen items-center justify-center bg-background">
@@ -93,6 +121,19 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* ─── Public emergency route — NO auth required ─── */}
+        <Route path="/emergency/:uhid" element={<EmergencyPage />} />
+
+        {/* ─── Video call route — authenticated any role ─── */}
+        <Route
+          path="/appointment/:id/call"
+          element={
+            <ProtectedRoute>
+              <VideoCallPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* ─── Public / Guest routes ─── */}
         <Route element={<PublicLayout />}>
           <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
@@ -112,11 +153,13 @@ export default function App() {
           }
         >
           <Route path="dashboard" element={<PatientDashboardPage />} />
-          <Route path="records"   element={<PatientRecordsPage />} />
+          <Route path="records"      element={<PatientRecordsPage />} />
           <Route path="records/:id/ai" element={<AiReportPage />} />
-          <Route path="consent"   element={<PatientConsentPage />} />
-          <Route path="qr"        element={<ComingSoonPage />} />
-          <Route path="profile"   element={<ComingSoonPage />} />
+          <Route path="consent"      element={<PatientConsentPage />} />
+          <Route path="find-doctor"  element={<FindDoctorPage />} />
+          <Route path="appointments" element={<PatientAppointmentsPage />} />
+          <Route path="qr"           element={<QrPage />} />
+          <Route path="profile"      element={<ProfilePage />} />
         </Route>
 
         {/* ─── Doctor routes ─── */}
@@ -134,10 +177,11 @@ export default function App() {
           <Route path="patient/:uhid/prescribe"     element={<NewPrescriptionPage />} />
           <Route path="patient/:uhid/notes"         element={<ClinicalNotesPage />} />
           <Route path="patient/:uhid/ai-summary"   element={<AiSummaryPage />} />
-          <Route path="patients"  element={<ComingSoonPage />} />
-          <Route path="consents"  element={<DoctorConsentPage />} />
-          <Route path="records"   element={<DoctorRecordsPage />} />
-          <Route path="profile"   element={<ComingSoonPage />} />
+          <Route path="patients"     element={<Navigate to="/doctor/patient-lookup" replace />} />
+          <Route path="consents"     element={<DoctorConsentPage />} />
+          <Route path="records"      element={<DoctorRecordsPage />} />
+          <Route path="appointments" element={<DoctorAppointmentsPage />} />
+          <Route path="profile"      element={<ProfilePage />} />
         </Route>
 
         {/* ─── Staff routes ─── */}
@@ -152,8 +196,8 @@ export default function App() {
           <Route path="dashboard" element={<StaffDashboardPage />} />
           <Route path="upload"    element={<StaffUploadRecordPage />} />
           <Route path="search"    element={<StaffSearchPatientPage />} />
-          <Route path="records"   element={<ComingSoonPage />} />
-          <Route path="profile"   element={<ComingSoonPage />} />
+          <Route path="records"   element={<Navigate to="/staff/search" replace />} />
+          <Route path="profile"   element={<ProfilePage />} />
         </Route>
 
         {/* ─── Hospital Admin routes ─── */}
@@ -166,12 +210,12 @@ export default function App() {
           }
         >
           <Route path="dashboard" element={<AdminDashboardPage />} />
-          <Route path="staff"     element={<ComingSoonPage />} />
-          <Route path="doctors"   element={<ComingSoonPage />} />
-          <Route path="audit"     element={<ComingSoonPage />} />
-          <Route path="analytics" element={<ComingSoonPage />} />
-          <Route path="hospital"  element={<ComingSoonPage />} />
-          <Route path="settings"  element={<ComingSoonPage />} />
+          <Route path="staff"     element={<AdminStaffPage />} />
+          <Route path="doctors"   element={<AdminDoctorsPage />} />
+          <Route path="audit"     element={<AdminAuditLogsPage />} />
+          <Route path="analytics" element={<AdminAnalyticsPage />} />
+          <Route path="hospital"  element={<AdminHospitalProfilePage />} />
+          <Route path="settings"  element={<AdminSecuritySettingsPage />} />
         </Route>
 
         {/* ─── Super Admin routes ─── */}
@@ -184,12 +228,12 @@ export default function App() {
           }
         >
           <Route path="dashboard"  element={<SuperAdminDashboardPage />} />
-          <Route path="hospitals"  element={<ComingSoonPage />} />
-          <Route path="users"      element={<ComingSoonPage />} />
-          <Route path="insurance"  element={<ComingSoonPage />} />
-          <Route path="audit"      element={<ComingSoonPage />} />
-          <Route path="analytics"  element={<ComingSoonPage />} />
-          <Route path="settings"   element={<ComingSoonPage />} />
+          <Route path="hospitals"  element={<SuperAdminHospitalsPage />} />
+          <Route path="users"      element={<SuperAdminUsersPage />} />
+          <Route path="insurance"  element={<SuperAdminInsurancePage />} />
+          <Route path="audit"      element={<AdminAuditLogsPage />} />
+          <Route path="analytics"  element={<SuperAdminAnalyticsPage />} />
+          <Route path="settings"   element={<SuperAdminSettingsPage />} />
         </Route>
 
         {/* ─── Insurance routes ─── */}
@@ -202,10 +246,12 @@ export default function App() {
           }
         >
           <Route path="dashboard"       element={<InsuranceDashboardPage />} />
-          <Route path="claims/pending"  element={<ComingSoonPage />} />
-          <Route path="claims/approved" element={<ComingSoonPage />} />
-          <Route path="access"          element={<ComingSoonPage />} />
-          <Route path="profile"         element={<ComingSoonPage />} />
+          <Route path="claims/new"      element={<NewClaimPage />} />
+          <Route path="claims/:id"      element={<ClaimDetailPage />} />
+          <Route path="claims/pending"  element={<InsurancePendingClaimsPage />} />
+          <Route path="claims/approved" element={<InsuranceApprovedClaimsPage />} />
+          <Route path="access"          element={<InsuranceAccessRequestsPage />} />
+          <Route path="profile"         element={<ProfilePage />} />
         </Route>
 
         {/* ─── Default redirect ─── */}

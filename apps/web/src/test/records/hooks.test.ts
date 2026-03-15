@@ -1,3 +1,4 @@
+/// <reference types="vitest/globals" />
 /**
  * Unit tests — useRecords hooks
  *

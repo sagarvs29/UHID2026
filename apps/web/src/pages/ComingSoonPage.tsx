@@ -271,15 +271,15 @@ const STATUS_CONFIG = {
 
 const ALL_PHASES = [
   { id: 'Phase 1', label: 'Authentication & Accounts', done: true },
-  { id: 'Phase 2', label: 'Medical Records', done: false },
-  { id: 'Phase 3', label: 'Consent Management', done: false },
-  { id: 'Phase 4', label: 'Clinical Features', done: false },
-  { id: 'Phase 5', label: 'AI Health Insights', done: false },
-  { id: 'Phase 6', label: 'QR & Emergency Access', done: false },
-  { id: 'Phase 7', label: 'Insurance & Claims', done: false },
-  { id: 'Phase 8', label: 'Admin & Hospital Mgmt', done: false },
-  { id: 'Phase 9', label: 'Telehealth', done: false },
-  { id: 'Phase 10', label: 'Testing & Deployment', done: false },
+  { id: 'Phase 2', label: 'Medical Records', done: true },
+  { id: 'Phase 3', label: 'Consent Management', done: true },
+  { id: 'Phase 4', label: 'Clinical Features', done: true },
+  { id: 'Phase 5', label: 'AI Health Insights', done: true },
+  { id: 'Phase 6', label: 'QR & Emergency Access', done: true },
+  { id: 'Phase 7', label: 'Insurance & Claims', done: true },
+  { id: 'Phase 8', label: 'Admin & Hospital Mgmt', done: true },
+  { id: 'Phase 9', label: 'Telehealth', done: true },
+  { id: 'Phase 10', label: 'Testing & Deployment', done: true },
 ];
 
 export default function ComingSoonPage() {

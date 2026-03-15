@@ -22,7 +22,7 @@ const schema = z.object({
     .refine((v) => (RECORD_TYPES as readonly string[]).includes(v), {
       message: 'Record type is required',
     }) as z.ZodType<RecordType>,
-  subType: z.string().optional() as z.ZodOptional<z.ZodEnum<[string, ...string[]]>>,
+  subType: z.string().optional() as unknown as z.ZodOptional<z.ZodEnum<[string, ...string[]]>>,
   title: z
     .string({ required_error: 'Title is required' })
     .min(3, 'Title must be at least 3 characters')

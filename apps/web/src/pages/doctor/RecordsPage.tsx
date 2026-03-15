@@ -203,7 +203,7 @@ export default function DoctorRecordsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const queryParams: GetRecordsParams = {
-    type: typeFilter || undefined,
+    type: (typeFilter || undefined) as GetRecordsParams['type'],
     page,
     limit: 10,
   };

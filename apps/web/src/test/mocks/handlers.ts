@@ -451,24 +451,23 @@ export const mockPendingMember: PendingMember = {
 export const mockActiveStaffResponse: ActiveStaffResponse = {
   doctors: [
     {
-      id:              'user_doc_001',
-      profileId:       'doc_001',
+      userId:          'user_doc_001',
       name:            'Dr. Active Doctor',
+      role:            'DOCTOR',
       specialty:       'General Medicine',
       licenseNumber:   'MCI-2019-999',
-      isVerified:      true,
-      isActive:        true,
+      email:           'doctor@example.com',
+      verifiedAt:      '2026-03-01T10:00:00.000Z',
     },
   ],
   staff: [
     {
-      id:              'user_staff_001',
-      profileId:       'staff_001',
+      userId:          'user_staff_001',
       name:            'Nurse Active',
+      role:            'HOSPITAL_STAFF',
       staffType:       'NURSE',
+      email:           'nurse@example.com',
       employeeId:      'EMP-001',
-      isVerified:      true,
-      isActive:        true,
     },
   ],
 };

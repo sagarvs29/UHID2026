@@ -1,3 +1,4 @@
+/// <reference types="vitest/globals" />
 /**
  * Regression tests — Phase 2 Records
  *
