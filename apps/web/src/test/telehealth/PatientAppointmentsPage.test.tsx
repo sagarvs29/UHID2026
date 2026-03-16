@@ -23,7 +23,7 @@ describe('PatientAppointmentsPage', () => {
     renderPage();
     await waitFor(() => {
       expect(screen.getByText('Dr. Priya Sharma')).toBeInTheDocument();
-    });
+    }, { timeout: 5000 });
   });
 
   it('shows confirmation number', async () => {

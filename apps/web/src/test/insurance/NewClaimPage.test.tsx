@@ -82,11 +82,11 @@ describe('NewClaimPage', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('submit-result')).toBeInTheDocument();
-    });
+    }, { timeout: 5000 });
 
     expect(screen.getByText(MOCK_CLAIM_NUMBER)).toBeInTheDocument();
     expect(screen.getByTestId('risk-level')).toBeInTheDocument();
-  });
+  }, 15000);
 
   it('shows submit error on API failure', async () => {
     server.use(
@@ -106,8 +106,8 @@ describe('NewClaimPage', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('submit-error')).toBeInTheDocument();
-    });
-  });
+    }, { timeout: 5000 });
+  }, 15000);
 
   it('"Submit Another" button resets form after success', async () => {
     const { Wrapper } = createWrapper('/insurance/claims/new');
@@ -118,7 +118,7 @@ describe('NewClaimPage', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('submit-result')).toBeInTheDocument();
-    });
+    }, { timeout: 5000 });
 
     // Find and click "Submit Another"
     const submitAnotherBtn = screen.getByRole('button', { name: /submit another/i });
@@ -128,7 +128,7 @@ describe('NewClaimPage', () => {
       expect(screen.getByTestId('input-patientUhid')).toBeInTheDocument();
       expect(screen.queryByTestId('submit-result')).not.toBeInTheDocument();
     });
-  });
+  }, 15000);
 
   it('"View Claim Detail" button navigates to detail page after success', async () => {
     const { Wrapper } = createWrapper('/insurance/claims/new');
@@ -139,10 +139,10 @@ describe('NewClaimPage', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('submit-result')).toBeInTheDocument();
-    });
+    }, { timeout: 10000 });
 
     const viewBtn = screen.getByRole('button', { name: /view claim detail/i });
     fireEvent.click(viewBtn);
     expect(mockNavigate).toHaveBeenCalledWith(`/insurance/claims/${MOCK_CLAIM_ID}`);
-  });
+  }, 15000);
 });

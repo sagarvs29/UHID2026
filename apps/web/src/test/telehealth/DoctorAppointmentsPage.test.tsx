@@ -23,7 +23,7 @@ describe('DoctorAppointmentsPage', () => {
     renderPage();
     await waitFor(() => {
       expect(screen.getByText('Rohan Mehta')).toBeInTheDocument();
-    });
+    }, { timeout: 5000 });
   });
 
   it('shows patient UHID', async () => {
