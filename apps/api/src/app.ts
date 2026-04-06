@@ -25,7 +25,7 @@ export function createApp(): Application {
   app.use(helmet());
   app.use(
     cors({
-      origin: process.env.CLIENT_URL ?? 'http://localhost:5173',
+      origin: process.env.CLIENT_URL ?? 'http://localhost:5175',
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'x-internal-secret'],
@@ -95,6 +95,19 @@ export function createApp(): Application {
   // app.use('/api/admin', authenticate, authorize('SUPER_ADMIN'), adminRouter);
   // app.use('/api/telehealth', authenticate, telehealthRouter);
   // app.use('/api/internal', internalOnly, internalRouter);
+
+  // ─── Serve frontend in production ─────────────────────────
+  if (process.env.NODE_ENV === 'production') {
+    const path = require('path');
+    const frontendDist = path.resolve(__dirname, '../../web/dist');
+    app.use(express.static(frontendDist));
+
+    // SPA fallback — any non-API route serves index.html
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api/')) return next();
+      res.sendFile(path.join(frontendDist, 'index.html'));
+    });
+  }
 
   // ─── Error handling ─────────────────────────────────────
   app.use(notFound);

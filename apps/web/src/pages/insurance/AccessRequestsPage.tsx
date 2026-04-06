@@ -79,16 +79,17 @@ export default function AccessRequestsPage() {
         </button>
       </div>
 
-      {/* Notice */}
-      <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
-        <Info className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+      {/* Current implementation note */}
+      <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+        <Info className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
         <div>
-          <p className="text-sm font-semibold text-blue-800">
-            Dedicated access request management coming soon
+          <p className="text-sm font-semibold text-emerald-800">
+            Consent verification is automatic
           </p>
-          <p className="text-xs text-blue-600 mt-0.5">
-            A full request/revoke UI where you can send consent requests to patients and track their status
-            will be available in a future update.
+          <p className="text-xs text-emerald-600 mt-0.5">
+            When you submit a claim, the system automatically checks the patient's active consent.
+            If consent exists, you can view and verify the attached medical records. If not, the claim
+            will indicate that patient consent is required before processing.
           </p>
         </div>
       </div>

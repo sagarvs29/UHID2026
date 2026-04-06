@@ -72,6 +72,7 @@ export function getSignedUrl(publicId: string, mimeType: string): string {
     expires_at: expiresAt,
     resource_type: isPdf ? 'raw' : 'image',
     secure: true,
+    ...(isPdf ? { format: 'pdf' } : {}),
   });
 }
 

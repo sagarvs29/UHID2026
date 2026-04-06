@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import {
   FileText, Loader2, AlertCircle, Download, X, ChevronLeft, ChevronRight,
-  Sparkles, Calendar, Building2,
+  Sparkles, Calendar, Building2, Eye,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
-  useMyRecords, useGetRecord, useDownloadRecord, getRecordErrorMessage,
+  useMyRecords, useGetRecord, useDownloadRecord, useViewRecord, useDecodeRecord, getRecordErrorMessage,
 } from '@/hooks/useRecords';
 import {
   RECORD_TYPES, RECORD_TYPE_LABELS, RECORD_SUBTYPE_LABELS,
@@ -22,6 +22,8 @@ function RecordDetailModal({
 }) {
   const { data: record, isLoading, isError, error } = useGetRecord(id);
   const download = useDownloadRecord();
+  const view = useViewRecord();
+  const decode = useDecodeRecord();
 
   return (
     <div
@@ -123,18 +125,47 @@ function RecordDetailModal({
                 </div>
               )}
 
-              <button
-                onClick={() => download.mutate(id)}
-                disabled={download.isPending}
-                className="w-full flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-medium hover:bg-accent transition-colors disabled:opacity-60"
-              >
-                {download.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Download className="w-4 h-4" />
-                )}
-                Download File
-              </button>
+              <div className="grid grid-cols-2 gap-2 mt-4">
+                <button
+                  onClick={() => view.mutate(id)}
+                  disabled={view.isPending}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-medium hover:bg-accent transition-colors disabled:opacity-60"
+                >
+                  {view.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Eye className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                  )}
+                  View
+                </button>
+                <button
+                  onClick={() => download.mutate(id)}
+                  disabled={download.isPending}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-medium hover:bg-accent transition-colors disabled:opacity-60"
+                >
+                  {download.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                  )}
+                  Download
+                </button>
+              </div>
+
+              {!record.aiSummary && (
+                <button
+                  onClick={() => decode.mutate(id)}
+                  disabled={decode.isPending}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-violet-600 text-white py-2.5 text-sm font-medium hover:bg-violet-700 transition-colors disabled:opacity-60"
+                >
+                  {decode.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  ) : (
+                    <Sparkles className="w-4 h-4 text-white" />
+                  )}
+                  Explain with AI
+                </button>
+              )}
             </div>
           )}
         </div>

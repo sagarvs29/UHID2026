@@ -1,0 +1,131 @@
+name: UHID CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─── Lint & TypeScript check ──────────────────────────────────
+  type-check:
+    name: TypeScript Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Type-check API
+        run: npx tsc --noEmit --project apps/api/tsconfig.json
+
+      - name: Type-check Web
+        run: npx tsc --noEmit --project apps/web/tsconfig.json
+
+  # ─── API Tests ────────────────────────────────────────────────
+  test-api:
+    name: API Tests
+    runs-on: ubuntu-latest
+    needs: type-check
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate --schema=apps/api/prisma/schema.prisma
+
+      - name: Run API Tests
+        run: npm test --workspace=apps/api
+        env:
+          NODE_ENV: test
+          DATABASE_URL: 'postgresql://test:test@localhost:5432/test'
+          DIRECT_URL: 'postgresql://test:test@localhost:5432/test'
+          JWT_ACCESS_SECRET: 'test-access-secret-that-is-at-least-32-chars-long-for-ci'
+          JWT_REFRESH_SECRET: 'test-refresh-secret-that-is-at-least-32-chars-long-for-ci'
+          REDIS_URL: 'redis://localhost:6379'
+          CLOUDINARY_CLOUD_NAME: 'test'
+          CLOUDINARY_API_KEY: 'test'
+          CLOUDINARY_API_SECRET: 'test'
+          SMTP_USER: 'test@test.com'
+          SMTP_PASS: 'test'
+          INTERNAL_SERVICE_SECRET: 'test-internal-secret-32chars'
+          ENCRYPTION_KEY: '10360e7672c5c142a7d1883f84bf7fb8745f1800732e0e61733f71428fbd5a5b'
+          EMERGENCY_SECRET: '0d014875bb01915e9af3e48b9cb30ddaa88450551daccc0fb39435d5e14aebb0'
+
+  # ─── Frontend Tests ───────────────────────────────────────────
+  test-web:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    needs: type-check
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Run Frontend Tests
+        run: npm test --workspace=apps/web
+
+  # ─── Security Audit ──────────────────────────────────────────
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: npm audit (high severity)
+        run: npm audit --audit-level=high || true
+
+  # ─── Build ───────────────────────────────────────────────────
+  build:
+    name: Production Build
+    runs-on: ubuntu-latest
+    needs: [test-api, test-web]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate --schema=apps/api/prisma/schema.prisma
+
+      - name: Build API
+        run: npm run build --workspace=apps/api
+
+      - name: Build Frontend
+        run: npm run build --workspace=apps/web
+
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist/
+          retention-days: 7

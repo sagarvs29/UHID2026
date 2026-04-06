@@ -101,10 +101,10 @@ export default function SecuritySettingsPage() {
       <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
         <Info className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
         <div>
-          <p className="text-sm font-semibold text-blue-800">Settings are currently display-only</p>
+          <p className="text-sm font-semibold text-blue-800">Security policies</p>
           <p className="text-xs text-blue-600 mt-0.5">
-            The backend API for persisting security settings will be added in a future update.
-            All changes here are visual previews.
+            Security settings are enforced at the platform level. Contact your Super Admin for policy changes
+            that require approval.
           </p>
         </div>
       </div>

@@ -75,7 +75,7 @@ export async function sendPasswordResetEmail(
   userName: string,
   resetToken: string
 ): Promise<void> {
-  const resetUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+  const resetUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5175'}/reset-password?token=${resetToken}`;
   await transporter.sendMail({
     from: `"UHID Health" <${process.env.SMTP_USER}>`,
     to,
@@ -104,7 +104,7 @@ export async function sendEmailVerificationEmail(
   userName: string,
   token: string
 ): Promise<void> {
-  const verifyUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5173'}/verify-email?token=${token}`;
+  const verifyUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5175'}/verify-email?token=${token}`;
   await transporter.sendMail({
     from: `"UHID Health" <${process.env.SMTP_USER}>`,
     to,
@@ -206,7 +206,7 @@ export async function sendHospitalAdminCredentialsEmail(
   hospitalName: string,
   tempPassword: string,
 ): Promise<void> {
-  const loginUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5173'}/login`;
+  const loginUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5175'}/login`;
   await transporter.sendMail({
     from: `"UHID Health" <${process.env.SMTP_USER}>`,
     to,
@@ -340,7 +340,7 @@ export async function sendHospitalActionEmail(
   action: 'VERIFY' | 'SUSPEND',
   notes?: string,
 ): Promise<void> {
-  const loginUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5173'}/login`;
+  const loginUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5175'}/login`;
 
   const cfg: Record<string, { subject: string; color: string; icon: string; heading: string; body: string; cta: string }> = {
     VERIFY: {
@@ -396,7 +396,7 @@ export async function sendStaffVerificationResultEmail(
   roleLabel: string,
   notes?: string,
 ): Promise<void> {
-  const loginUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5173'}/login`;
+  const loginUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5175'}/login`;
 
   const cfgMap: Record<string, { subject: string; color: string; icon: string; heading: string; body: string; cta: string }> = {
     VERIFY: {

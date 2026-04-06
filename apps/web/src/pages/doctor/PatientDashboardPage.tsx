@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { usePatientProfile, useClinicalNotes, usePrescriptions } from '@/hooks/useClinical';
+import { useGetRecords, useDownloadRecord, useViewRecord } from '@/hooks/useRecords';
 import {
   SEVERITY_BADGE,
   DRUG_FORM_LABELS,
@@ -59,6 +60,67 @@ function OverviewTab({ patient }: { patient: NonNullable<ReturnType<typeof usePa
           }
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Records Tab ──────────────────────────────────────────────────────────────
+function RecordsTab({ uhid }: { uhid: string }) {
+  const { data, isLoading } = useGetRecords(uhid);
+  const download = useDownloadRecord();
+  const view = useViewRecord();
+
+  if (isLoading) return <div data-testid="records-loading" className="py-8 text-center text-sm text-muted-foreground">Loading records…</div>;
+
+  const records = data?.records ?? [];
+
+  return (
+    <div data-testid="records-tab">
+      <h3 className="text-sm font-semibold text-foreground mb-4">Medical Records</h3>
+      {records.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No medical records found for this patient.</p>
+      ) : (
+        <ul className="space-y-3">
+          {records.map((rec: any) => (
+            <li key={rec.id} className="rounded-lg border border-border bg-card p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{rec.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {rec.recordType?.replace(/_/g, ' ')} · {new Date(rec.createdAt).toLocaleDateString()}
+                  </p>
+                  {rec.description && (
+                    <p className="text-xs text-muted-foreground mt-1">{rec.description}</p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => view.mutate(rec.id)}
+                    className="rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/20"
+                  >
+                    View
+                  </button>
+                  <button
+                    onClick={() => download.mutate(rec.id)}
+                    className="rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/80"
+                  >
+                    Download
+                  </button>
+                </div>
+              </div>
+              {rec.tags?.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {rec.tags.map((tag: string) => (
+                    <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -258,11 +320,7 @@ export default function PatientDashboardPage() {
       {/* Tab content */}
       <div className="mt-6">
         {activeTab === 'overview'      && <OverviewTab patient={patient} />}
-        {activeTab === 'records'       && (
-          <div data-testid="records-tab" className="text-sm text-muted-foreground">
-            Records functionality coming soon.
-          </div>
-        )}
+        {activeTab === 'records'       && <RecordsTab uhid={uhid!} />}
         {activeTab === 'prescriptions' && <PrescriptionsTab uhid={uhid!} />}
         {activeTab === 'notes'         && <NotesTab uhid={uhid!} />}
       </div>

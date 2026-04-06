@@ -104,6 +104,39 @@ export function useDownloadRecord() {
   });
 }
 
+// ─── Get signed view URL for a record ────────────────────────────────────────
+export function useViewRecord() {
+  return useMutation({
+    mutationFn: async (recordId: string) => {
+      const { data } = await api.get<{ success: boolean; data: DownloadUrlResponse }>(
+        `/records/record/${recordId}/download`
+      );
+      return data.data;
+    },
+    onSuccess: ({ downloadUrl }) => {
+      // Open in new tab to view
+      window.open(downloadUrl, '_blank');
+    },
+  });
+}
+
+// ─── Decode record with AI ───────────────────────────────────────────────────
+export function useDecodeRecord() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (recordId: string) => {
+      const { data } = await api.post<{ success: boolean; data: any }>(
+        '/ai/decode',
+        { recordId }
+      );
+      return data.data;
+    },
+    onSuccess: (_data, recordId) => {
+      qc.invalidateQueries({ queryKey: recordKeys.detail(recordId) });
+    },
+  });
+}
+
 // ─── Helper: get error message ────────────────────────────────────────────────
 export function getRecordErrorMessage(err: unknown): string {
   if (err && typeof err === 'object' && 'response' in err) {

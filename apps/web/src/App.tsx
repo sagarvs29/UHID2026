@@ -12,6 +12,7 @@ import RegisterPage from '@/pages/auth/RegisterPage';
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from '@/pages/auth/ResetPasswordPage';
 import VerifyEmailPage from '@/pages/auth/VerifyEmailPage';
+import LandingPage from '@/pages/LandingPage';
 
 // Pages - Role dashboards
 import PatientDashboardPage from '@/pages/patient/DashboardPage';
@@ -256,8 +257,9 @@ export default function App() {
           <Route path="profile"         element={<ProfilePage />} />
         </Route>
 
-        {/* ─── Default redirect ─── */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        {/* ─── Landing page ─── */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/home" element={<LandingPage />} />
         <Route path="/dashboard" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

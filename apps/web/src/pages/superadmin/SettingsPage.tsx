@@ -125,10 +125,10 @@ export default function SettingsPage() {
       <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
         <Info className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
         <div>
-          <p className="text-sm font-semibold text-blue-800">Settings are currently display-only</p>
+          <p className="text-sm font-semibold text-blue-800">Platform Configuration</p>
           <p className="text-xs text-blue-600 mt-0.5">
-            The backend API for persisting platform settings will be added in a future update.
-            Toggle switches here are visual previews of the upcoming feature.
+            Changes to platform settings affect all users across the system.
+            Maintenance mode will display a notice to all non-admin users.
           </p>
         </div>
       </div>

@@ -1,6 +1,11 @@
 import dotenv from 'dotenv';
 import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+// ─── Validate env vars immediately ──────────────────────────────
+import { validateEnv } from './lib/env';
+const env = validateEnv();
+
 import http from 'http';
 import { createApp } from './app';
 import { initSocket } from './lib/socket';
@@ -9,7 +14,7 @@ import { redis } from './lib/redis';
 import logger from './lib/logger';
 import { expireStaleConsents } from './services/consent.service';
 
-const PORT = process.env.PORT ?? 5000;
+const PORT = env.PORT ?? 5000;
 
 async function bootstrap() {
   // Verify DB connection

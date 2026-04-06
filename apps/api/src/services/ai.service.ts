@@ -3,7 +3,7 @@ import { SummaryType, ConsentScope, Role, Prisma } from '@prisma/client';
 import axios from 'axios';
 import logger from '@/lib/logger';
 
-const AI_SERVICE_URL    = process.env.AI_SERVICE_URL    ?? 'http://localhost:8000';
+const AI_SERVICE_URL    = process.env.AI_SERVICE_URL    ?? 'http://localhost:8001';
 const INTERNAL_SECRET   = process.env.INTERNAL_SERVICE_SECRET ?? '';
 const REPORT_TTL_MS     = 7 * 24 * 60 * 60 * 1000;   // 7 days
 const SUMMARY_TTL_MS    = 24 * 60 * 60 * 1000;         // 24 hours
