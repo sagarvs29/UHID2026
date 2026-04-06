@@ -82,4 +82,7 @@ async function bootstrap() {
   });
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('[FATAL] Bootstrap failed:', err);
+  process.exit(1);
+});

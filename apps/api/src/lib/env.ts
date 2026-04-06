@@ -79,7 +79,14 @@ export function validateEnv(): Env {
     console.error('║       ENVIRONMENT VALIDATION FAILED              ║');
     console.error('╚══════════════════════════════════════════════════╝\n');
     console.error(formatted);
-    console.error('\nFix the above issues in apps/api/.env and restart.\n');
+    console.error('\nFix the above issues in your environment variables.\n');
+
+    // In production (Railway), log warning but don't exit — let the server try to start
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('[ENV] Continuing with partial environment in production...');
+      _env = result.data as unknown as Env;
+      return _env;
+    }
 
     process.exit(1);
   }
