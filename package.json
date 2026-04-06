@@ -14,11 +14,8 @@
     "dev:ai": "cd apps/ai && uvicorn main:app --reload --port 8001",
     "build": "npm run build --workspace=apps/api && npm run build --workspace=apps/web",
     "build:railway": "npx prisma generate --schema=apps/api/prisma/schema.prisma && npm run build --workspace=apps/web && npm run build --workspace=apps/api",
-    "start:prod": "node -r tsconfig-paths/register apps/api/dist/index.js",
+    "start:prod": "node apps/api/dist/index.js",
     "test": "npm run test --workspace=apps/api && npm run test --workspace=apps/web"
-  },
-  "dependencies": {
-    "tsconfig-paths": "^4.2.0"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

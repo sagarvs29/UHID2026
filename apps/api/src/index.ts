@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import path from 'path';
+// Load .env file if present (development only — Railway injects env vars directly)
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 // ─── Validate env vars immediately ──────────────────────────────
@@ -14,7 +15,8 @@ import { redis } from './lib/redis';
 import logger from './lib/logger';
 import { expireStaleConsents } from './services/consent.service';
 
-const PORT = env.PORT ?? 5000;
+// Railway assigns its own PORT — always prefer process.env.PORT
+const PORT = process.env.PORT ?? env.PORT ?? 5000;
 
 async function bootstrap() {
   // Verify DB connection

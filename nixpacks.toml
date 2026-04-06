@@ -12,4 +12,4 @@ cmds = [
 ]
 
 [start]
-cmd = "node -r tsconfig-paths/register apps/api/dist/index.js"
+cmd = "node apps/api/dist/index.js"
