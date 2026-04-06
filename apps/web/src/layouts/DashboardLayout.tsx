@@ -215,11 +215,25 @@ export default function DashboardLayout() {
               </span>
             )}
             <NotificationBell />
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <button
+              onClick={() => {
+                const profileRoutes: Record<Role, string> = {
+                  PATIENT:            '/patient/profile',
+                  DOCTOR:             '/doctor/profile',
+                  HOSPITAL_STAFF:     '/staff/profile',
+                  HOSPITAL_ADMIN:     '/admin/hospital',
+                  INSURANCE_PROVIDER: '/insurance/profile',
+                  SUPER_ADMIN:        '/superadmin/settings',
+                };
+                if (user?.role) navigate(profileRoutes[user.role]);
+              }}
+              title="View profile"
+              className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors cursor-pointer"
+            >
               <span className="text-xs font-bold text-primary">
                 {user?.name?.charAt(0)?.toUpperCase()}
               </span>
-            </div>
+            </button>
           </div>
         </header>
 
