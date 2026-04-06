@@ -25,7 +25,7 @@ async function bootstrap() {
     logger.info('[DB] Prisma connected to Supabase PostgreSQL');
   } catch (err) {
     logger.error('[DB] Failed to connect:', err);
-    process.exit(1);
+    logger.warn('[DB] Server will start but database operations will fail. Check DATABASE_URL.');
   }
 
   // Verify Redis connection
