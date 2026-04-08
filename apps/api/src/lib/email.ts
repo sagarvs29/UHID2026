@@ -1,22 +1,41 @@
 import nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 
-export const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST ?? 'smtp.gmail.com',
-  port: Number(process.env.SMTP_PORT ?? 587),
-  secure: false, // STARTTLS
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+/**
+ * Lazy transporter — built on first use so process.env is read AFTER
+ * dotenv.config() runs in index.ts. In CommonJS (tsc output) all imports
+ * are hoisted and executed before any module-level code, so an eagerly
+ * created transporter would have undefined SMTP_USER / SMTP_PASS.
+ */
+let _transporter: Transporter | null = null;
 
-transporter.verify((err) => {
-  if (err) {
-    console.error('[Email] SMTP connection failed:', err.message);
-  } else {
-    console.log('[Email] SMTP ready — using', process.env.SMTP_USER);
+function getTransporter(): Transporter {
+  if (!_transporter) {
+    _transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST ?? 'smtp.gmail.com',
+      port: Number(process.env.SMTP_PORT ?? 587),
+      secure: false, // STARTTLS
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
   }
-});
+  return _transporter;
+}
+
+/**
+ * Call once at startup (after dotenv.config) to verify SMTP credentials.
+ */
+export function verifySmtp(): void {
+  getTransporter().verify((err) => {
+    if (err) {
+      console.error('[Email] SMTP connection failed:', err.message);
+    } else {
+      console.log('[Email] SMTP ready — using', process.env.SMTP_USER);
+    }
+  });
+}
 
 // ─── Email Templates ──────────────────────────────────────
 export async function sendPasswordResetEmail(
@@ -25,7 +44,7 @@ export async function sendPasswordResetEmail(
   resetToken: string
 ): Promise<void> {
   const resetUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5175'}/reset-password?token=${resetToken}`;
-  await transporter.sendMail({
+  await getTransporter().sendMail({
     from: `"UHID Health" <${process.env.SMTP_USER}>`,
     to,
     subject: 'Reset your UHID password',
@@ -54,7 +73,7 @@ export async function sendEmailVerificationEmail(
   token: string
 ): Promise<void> {
   const verifyUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5175'}/verify-email?token=${token}`;
-  await transporter.sendMail({
+  await getTransporter().sendMail({
     from: `"UHID Health" <${process.env.SMTP_USER}>`,
     to,
     subject: 'Verify your UHID email address',
@@ -83,7 +102,7 @@ export async function sendWelcomePatientEmail(
   userName: string,
   uhid: string
 ): Promise<void> {
-  await transporter.sendMail({
+  await getTransporter().sendMail({
     from: `"UHID Health" <${process.env.SMTP_USER}>`,
     to,
     subject: 'Welcome to UHID — Your Universal Health ID',
@@ -121,7 +140,7 @@ export async function sendApprovalPendingEmail(
   const approverLabel =
     role === 'INSURANCE_PROVIDER' ? 'UHID Super Admin' : `Hospital Admin at ${approverName}`;
 
-  await transporter.sendMail({
+  await getTransporter().sendMail({
     from: `"UHID Health" <${process.env.SMTP_USER}>`,
     to,
     subject: `UHID — Your ${roleLabel} account is under review`,
@@ -156,7 +175,7 @@ export async function sendHospitalAdminCredentialsEmail(
   tempPassword: string,
 ): Promise<void> {
   const loginUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5175'}/login`;
-  await transporter.sendMail({
+  await getTransporter().sendMail({
     from: `"UHID Health" <${process.env.SMTP_USER}>`,
     to,
     subject: `UHID — You are the Admin of ${hospitalName}`,
@@ -207,7 +226,7 @@ export async function sendConsentOtpEmail(
   scope: string[]
 ): Promise<void> {
   const scopeList = scope.map((s) => `<li>${s.replace(/_/g, ' ')}</li>`).join('');
-  await transporter.sendMail({
+  await getTransporter().sendMail({
     from: `"UHID Health" <${process.env.SMTP_USER}>`,
     to,
     subject: `Approve Record Access — ${requesterName} is requesting your data`,
@@ -264,7 +283,7 @@ export async function sendConsentStatusEmail(
   };
 
   const cfg = statusConfig[status];
-  await transporter.sendMail({
+  await getTransporter().sendMail({
     from: `"UHID Health" <${process.env.SMTP_USER}>`,
     to,
     subject: cfg.subject,
@@ -320,7 +339,7 @@ export async function sendHospitalActionEmail(
   };
 
   const c = cfg[action];
-  await transporter.sendMail({
+  await getTransporter().sendMail({
     from: `"UHID Health" <${process.env.SMTP_USER}>`,
     to,
     subject: c.subject,
@@ -374,7 +393,7 @@ export async function sendInsuranceProviderApprovalEmail(
           : `<p style="color: #6B7280; font-size: 14px;">If you believe this was a mistake, please contact UHID support at <strong>support@uhid.health</strong>.</p>`,
       };
 
-  await transporter.sendMail({
+  await getTransporter().sendMail({
     from: `"UHID Health" <${process.env.SMTP_USER}>`,
     to,
     subject: cfg.subject,
@@ -443,7 +462,7 @@ export async function sendStaffVerificationResultEmail(
   };
 
   const c = cfgMap[action];
-  await transporter.sendMail({
+  await getTransporter().sendMail({
     from: `"UHID Health" <${process.env.SMTP_USER}>`,
     to,
     subject: c.subject,

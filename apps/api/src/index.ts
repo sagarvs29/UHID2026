@@ -14,6 +14,7 @@ import { prisma } from './lib/prisma';
 import { redis } from './lib/redis';
 import logger from './lib/logger';
 import { expireStaleConsents } from './services/consent.service';
+import { verifySmtp } from './lib/email';
 
 // Railway assigns its own PORT — always prefer process.env.PORT
 const PORT = process.env.PORT ?? env.PORT ?? 5000;
@@ -35,6 +36,9 @@ async function bootstrap() {
   } catch (err) {
     logger.warn('[Redis] Could not ping — continuing without Redis (OTP/sessions will fail):', (err as Error).message);
   }
+
+  // Verify SMTP — now that dotenv is loaded, transporter reads correct credentials
+  verifySmtp();
 
   const app = createApp();
   const httpServer = http.createServer(app);
