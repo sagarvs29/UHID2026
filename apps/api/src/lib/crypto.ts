@@ -69,13 +69,11 @@ export function generateOtp(length = 6): string {
 }
 
 /**
- * Generates a UHID in format: UHID-XXXX-XXXX-XXXX (alphanumeric uppercase)
+ * Generates a UHID in format: UH-XXXXXX (6-digit number, e.g. UH-847291)
  */
 export function generateUHID(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const seg = () =>
-    Array.from(crypto.randomBytes(4))
-      .map((b) => chars[b % chars.length])
-      .join('');
-  return `UHID-${seg()}-${seg()}-${seg()}`;
+  // Generate a random 6-digit number (100000–999999)
+  const bytes = crypto.randomBytes(4);
+  const num = bytes.readUInt32BE(0) % 900000 + 100000;
+  return `UH-${num}`;
 }
