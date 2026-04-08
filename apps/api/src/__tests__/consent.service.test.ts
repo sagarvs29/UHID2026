@@ -35,11 +35,8 @@ jest.mock('@/lib/redis', () => ({
 
 // ─── Mock email ──────────────────────────────────────────────────────────────
 jest.mock('@/lib/email', () => ({
-  sendConsentRequestEmail: jest.fn().mockResolvedValue(undefined),
-  sendConsentApprovedEmail: jest.fn().mockResolvedValue(undefined),
-  sendConsentDeniedEmail: jest.fn().mockResolvedValue(undefined),
-  sendConsentRevokedEmail: jest.fn().mockResolvedValue(undefined),
-  sendConsentOtpEmail: jest.fn().mockResolvedValue(undefined),
+  sendConsentOtpEmail:    jest.fn().mockResolvedValue(undefined),
+  sendConsentStatusEmail: jest.fn().mockResolvedValue(undefined),
 }));
 
 // ─── Mock socket ─────────────────────────────────────────────────────────────

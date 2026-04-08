@@ -8,7 +8,7 @@ import {
   Role,
   Prisma,
 } from '@prisma/client';
-import { sendHospitalAdminCredentialsEmail, sendStaffVerificationResultEmail, sendHospitalActionEmail } from '@/lib/email';
+import { sendHospitalAdminCredentialsEmail, sendStaffVerificationResultEmail, sendHospitalActionEmail, sendInsuranceProviderApprovalEmail } from '@/lib/email';
 import type { AuditLogQuery } from '@/validators/admin.validator';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -726,6 +726,55 @@ export async function hospitalAction(
   }
 
   return { success: true, hospitalId, action };
+}
+
+// ─── Super admin: approve / reject Insurance Provider ───────────────────────
+
+export async function approveInsuranceProvider(
+  actorUserId: string,
+  targetUserId: string,
+  action: 'APPROVE' | 'REJECT',
+  notes?: string,
+) {
+  const user = await prisma.user.findUnique({
+    where:  { id: targetUserId },
+    select: { email: true, role: true },
+  });
+  if (!user) httpError('User not found', 404);
+  if (user!.role !== 'INSURANCE_PROVIDER') httpError('User is not an Insurance Provider', 400);
+
+  const provider = await prisma.insuranceProvider.findUnique({
+    where: { userId: targetUserId },
+  });
+  if (!provider) httpError('Insurance provider profile not found', 404);
+
+  const isApproved = action === 'APPROVE';
+
+  await prisma.insuranceProvider.update({
+    where: { userId: targetUserId },
+    data:  { isVerified: isApproved },
+  });
+
+  await writeAuditLog({
+    actorId:    actorUserId,
+    actorRole:  Role.SUPER_ADMIN,
+    action:     isApproved ? AuditAction.STAFF_VERIFIED : AuditAction.STAFF_REJECTED,
+    severity:   AuditSeverity.HIGH,
+    targetId:   targetUserId,
+    targetType: 'InsuranceProvider',
+    metadata:   { action, notes, companyName: provider!.companyName },
+  });
+
+  sendInsuranceProviderApprovalEmail(
+    user!.email,
+    provider!.companyName,
+    action,
+    notes,
+  ).catch((e) => logger.error('[Email] Failed to send insurance provider approval email', e));
+
+  logger.info(`[Admin] Insurance provider ${action}: ${provider!.companyName} (${targetUserId})`);
+
+  return { success: true, action, targetUserId };
 }
 
 // ─── Super admin: platform analytics ─────────────────────────────────────────

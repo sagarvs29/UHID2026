@@ -31,8 +31,10 @@ jest.mock('@/lib/logger', () => ({
 
 jest.mock('@/lib/email', () => ({
   __esModule: true,
-  sendStaffVerificationResultEmail: jest.fn().mockResolvedValue(undefined),
-  sendHospitalAdminCredentialsEmail: jest.fn().mockResolvedValue(undefined),
+  sendStaffVerificationResultEmail:    jest.fn().mockResolvedValue(undefined),
+  sendHospitalAdminCredentialsEmail:   jest.fn().mockResolvedValue(undefined),
+  sendHospitalActionEmail:             jest.fn().mockResolvedValue(undefined),
+  sendInsuranceProviderApprovalEmail:  jest.fn().mockResolvedValue(undefined),
 }));
 
 const mockPrisma = prisma as jest.Mocked<typeof prisma>;

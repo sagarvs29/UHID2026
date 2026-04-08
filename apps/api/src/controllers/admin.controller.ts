@@ -7,6 +7,7 @@ import {
   auditLogQuerySchema,
   hospitalActionSchema,
   createHospitalSchema,
+  insuranceProviderActionSchema,
 } from '@/validators/admin.validator';
 import * as adminService from '@/services/admin.service';
 
@@ -130,6 +131,18 @@ export const createHospital = [
     try {
       const data = await adminService.createHospital(req.user!.userId, req.body);
       res.status(201).json({ success: true, data });
+    } catch (e) { next(e); }
+  },
+];
+
+export const approveInsuranceProvider = [
+  validate(insuranceProviderActionSchema),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { userId } = req.params;
+      const { action, notes } = req.body as { action: 'APPROVE' | 'REJECT'; notes?: string };
+      const data = await adminService.approveInsuranceProvider(req.user!.userId, userId, action, notes);
+      res.json({ success: true, data });
     } catch (e) { next(e); }
   },
 ];

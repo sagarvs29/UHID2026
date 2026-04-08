@@ -49,4 +49,7 @@ router.patch('/super/hospitals/:id/verify', superAdminOnly, ...adminCtrl.hospita
 // GET  /admin/super/analytics
 router.get('/super/analytics', superAdminOnly, ...adminCtrl.getPlatformAnalytics);
 
+// PATCH /admin/super/insurance/:userId/approve
+router.patch('/super/insurance/:userId/approve', superAdminOnly, ...adminCtrl.approveInsuranceProvider);
+
 export default router;

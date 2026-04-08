@@ -19,57 +19,6 @@ transporter.verify((err) => {
 });
 
 // ─── Email Templates ──────────────────────────────────────
-export async function sendOtpEmail(
-  to: string,
-  otp: string,
-  userName: string
-): Promise<void> {
-  await transporter.sendMail({
-    from: `"UHID Health" <${process.env.SMTP_USER}>`,
-    to,
-    subject: 'Your UHID verification code',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
-        <h2 style="color: #2563EB;">UHID Verification</h2>
-        <p>Hello <strong>${userName}</strong>,</p>
-        <p>Your one-time verification code is:</p>
-        <div style="background: #F3F4F6; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
-          <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #1D4ED8;">${otp}</span>
-        </div>
-        <p style="color: #6B7280; font-size: 14px;">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
-        <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 20px 0;" />
-        <p style="color: #9CA3AF; font-size: 12px;">UHID — UniHealth ID Platform</p>
-      </div>
-    `,
-  });
-}
-
-export async function sendWelcomeEmail(
-  to: string,
-  userName: string,
-  uhid: string
-): Promise<void> {
-  await transporter.sendMail({
-    from: `"UHID Health" <${process.env.SMTP_USER}>`,
-    to,
-    subject: 'Welcome to UHID — Your UniHealth ID is Ready',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
-        <h2 style="color: #2563EB;">Welcome to UHID!</h2>
-        <p>Hello <strong>${userName}</strong>,</p>
-        <p>Your UniHealth ID has been created successfully.</p>
-        <div style="background: #EFF6FF; border: 2px solid #2563EB; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
-          <p style="margin: 0; color: #6B7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Your UHID</p>
-          <span style="font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #1D4ED8;">${uhid}</span>
-        </div>
-        <p style="color: #6B7280; font-size: 14px;">Keep this ID safe — it is your universal health identifier across all partner facilities.</p>
-        <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 20px 0;" />
-        <p style="color: #9CA3AF; font-size: 12px;">UHID — UniHealth ID Platform</p>
-      </div>
-    `,
-  });
-}
-
 export async function sendPasswordResetEmail(
   to: string,
   userName: string,
@@ -381,6 +330,60 @@ export async function sendHospitalActionEmail(
         <p>Hello <strong>${adminName}</strong>,</p>
         <p>${c.body}</p>
         ${c.cta}
+        <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 20px 0;" />
+        <p style="color: #9CA3AF; font-size: 12px;">UHID — UniHealth ID Platform</p>
+      </div>
+    `,
+  });
+}
+
+// ─── Insurance Provider Approval Email ──────────────────────────────────────
+
+export async function sendInsuranceProviderApprovalEmail(
+  to: string,
+  companyName: string,
+  action: 'APPROVE' | 'REJECT',
+  notes?: string,
+): Promise<void> {
+  const loginUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5175'}/login`;
+
+  const cfg = action === 'APPROVE'
+    ? {
+        subject: 'UHID — Your Insurance Provider account is approved! ✅',
+        color: '#16A34A',
+        icon: '✅',
+        heading: 'Account Approved!',
+        body: `Your <strong>Insurance Provider</strong> account for <strong>${companyName}</strong> has been <strong>approved</strong> by the UHID Super Admin.`,
+        cta: `
+          <p style="color: #374151; font-size: 14px;">You can now log in and start using the UHID platform.</p>
+          <div style="text-align: center; margin: 24px 0;">
+            <a href="${loginUrl}" style="background: #16A34A; color: white; padding: 12px 32px; border-radius: 6px; text-decoration: none; font-weight: bold;">Login Now</a>
+          </div>`,
+      }
+    : {
+        subject: 'UHID — Your Insurance Provider account was not approved',
+        color: '#DC2626',
+        icon: '❌',
+        heading: 'Account Not Approved',
+        body: `Unfortunately, your <strong>Insurance Provider</strong> account for <strong>${companyName}</strong> has been <strong>rejected</strong> by the UHID Super Admin.`,
+        cta: notes
+          ? `<div style="background: #FEF2F2; border: 1px solid #DC2626; border-radius: 8px; padding: 14px; margin: 16px 0;">
+              <p style="margin: 0; color: #991B1B; font-size: 13px;"><strong>Reason:</strong> ${notes}</p>
+            </div>
+            <p style="color: #6B7280; font-size: 14px;">If you believe this was a mistake, please contact UHID support at <strong>support@uhid.health</strong>.</p>`
+          : `<p style="color: #6B7280; font-size: 14px;">If you believe this was a mistake, please contact UHID support at <strong>support@uhid.health</strong>.</p>`,
+      };
+
+  await transporter.sendMail({
+    from: `"UHID Health" <${process.env.SMTP_USER}>`,
+    to,
+    subject: cfg.subject,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto;">
+        <h2 style="color: ${cfg.color};">${cfg.icon} ${cfg.heading}</h2>
+        <p>Hello <strong>${companyName}</strong>,</p>
+        <p>${cfg.body}</p>
+        ${cfg.cta}
         <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 20px 0;" />
         <p style="color: #9CA3AF; font-size: 12px;">UHID — UniHealth ID Platform</p>
       </div>

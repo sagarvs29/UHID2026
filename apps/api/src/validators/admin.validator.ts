@@ -81,8 +81,24 @@ export const createHospitalSchema = z.object({
                         .trim(),
 });
 
-export type VerifyStaffInput     = z.infer<typeof verifyStaffSchema>;
-export type DeactivateStaffInput = z.infer<typeof deactivateStaffSchema>;
-export type AuditLogQuery        = z.infer<typeof auditLogQuerySchema>;
-export type HospitalActionInput  = z.infer<typeof hospitalActionSchema>;
-export type CreateHospitalInput  = z.infer<typeof createHospitalSchema>;
+// ─── Insurance Provider approval (super admin) ───────────────────────────────
+
+export const insuranceProviderActionSchema = z.object({
+  action: z.enum(['APPROVE', 'REJECT']),
+  notes:  z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.action === 'REJECT' && (!data.notes || data.notes.trim().length < 10)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['notes'],
+      message: 'Notes are required (min 10 chars) when rejecting',
+    });
+  }
+});
+
+export type VerifyStaffInput                 = z.infer<typeof verifyStaffSchema>;
+export type DeactivateStaffInput             = z.infer<typeof deactivateStaffSchema>;
+export type AuditLogQuery                    = z.infer<typeof auditLogQuerySchema>;
+export type HospitalActionInput              = z.infer<typeof hospitalActionSchema>;
+export type CreateHospitalInput              = z.infer<typeof createHospitalSchema>;
+export type InsuranceProviderActionInput     = z.infer<typeof insuranceProviderActionSchema>;
