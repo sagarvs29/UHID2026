@@ -777,6 +777,283 @@ export async function approveInsuranceProvider(
   return { success: true, action, targetUserId };
 }
 
+// ─── Super admin: delete hospital (full hard delete) ─────────────────────────
+
+export async function deleteHospital(actorUserId: string, hospitalId: string) {
+  const hospital = await prisma.hospital.findUnique({
+    where: { id: hospitalId },
+    include: {
+      doctors: { select: { id: true, userId: true } },
+      staff:   { select: { id: true, userId: true } },
+      admin:   { select: { userId: true } },
+    },
+  });
+  if (!hospital) httpError('Hospital not found', 404);
+
+  const doctorIds     = hospital!.doctors.map((d) => d.id);
+  const doctorUserIds = hospital!.doctors.map((d) => d.userId);
+  const staffIds      = hospital!.staff.map((s) => s.id);
+  const staffUserIds  = hospital!.staff.map((s) => s.userId);
+  const adminUserId   = hospital!.admin?.userId;
+
+  await prisma.$transaction(async (tx) => {
+    // Collect appointment IDs and hospital medical-record IDs for cascading
+    const [appointments, medicalRecords] = await Promise.all([
+      tx.appointment.findMany({ where: { hospitalId }, select: { id: true } }),
+      tx.medicalRecord.findMany({ where: { hospitalId }, select: { id: true } }),
+    ]);
+    const appointmentIds   = appointments.map((a) => a.id);
+    const medicalRecordIds = medicalRecords.map((r) => r.id);
+
+    if (doctorIds.length > 0) {
+      // PharmaCheckLogs by hospital doctors
+      await tx.pharmaCheckLog.deleteMany({ where: { doctorId: { in: doctorIds } } });
+      // DoctorReviews by hospital doctors
+      await tx.doctorReview.deleteMany({ where: { doctorId: { in: doctorIds } } });
+      // EmergencyAccesses initiated by hospital doctors
+      await tx.emergencyAccess.deleteMany({ where: { accessedByDoctorId: { in: doctorIds } } });
+
+      // PrescriptionItems → Prescriptions by hospital doctors
+      const doctorPrescriptions = await tx.prescription.findMany({
+        where: { doctorId: { in: doctorIds } },
+        select: { id: true },
+      });
+      if (doctorPrescriptions.length > 0) {
+        await tx.prescriptionItem.deleteMany({
+          where: { prescriptionId: { in: doctorPrescriptions.map((p) => p.id) } },
+        });
+      }
+      await tx.prescription.deleteMany({ where: { doctorId: { in: doctorIds } } });
+      await tx.clinicalNote.deleteMany({ where: { doctorId: { in: doctorIds } } });
+      await tx.consent.deleteMany({ where: { doctorId: { in: doctorIds } } });
+      await tx.doctorAvailability.deleteMany({ where: { doctorId: { in: doctorIds } } });
+    }
+
+    // Appointments at this hospital (reviews + notes + prescriptions already cleared above)
+    if (appointmentIds.length > 0) {
+      await tx.appointment.deleteMany({ where: { hospitalId } });
+    }
+
+    // Doctor profiles
+    if (doctorIds.length > 0) {
+      await tx.doctor.deleteMany({ where: { hospitalId } });
+    }
+
+    // Nullify uploadedByStaffId on records (preserve record, unlink staff)
+    if (staffIds.length > 0) {
+      await tx.medicalRecord.updateMany({
+        where: { uploadedByStaffId: { in: staffIds } },
+        data:  { uploadedByStaffId: null },
+      });
+    }
+    await tx.hospitalStaff.deleteMany({ where: { hospitalId } });
+    await tx.hospitalAdmin.deleteMany({ where: { hospitalId } });
+
+    // AI summaries and claim-doc links for hospital records
+    if (medicalRecordIds.length > 0) {
+      await tx.aiReportSummary.deleteMany({ where: { recordId: { in: medicalRecordIds } } });
+      await tx.claimDocument.updateMany({
+        where: { originalRecordId: { in: medicalRecordIds } },
+        data:  { originalRecordId: null },
+      });
+    }
+    await tx.medicalRecord.deleteMany({ where: { hospitalId } });
+    await tx.auditLog.deleteMany({ where: { hospitalId } });
+    await tx.hospital.delete({ where: { id: hospitalId } });
+
+    // Delete user accounts for hospital staff/doctors/admin
+    const allUserIds = [
+      ...(adminUserId ? [adminUserId] : []),
+      ...doctorUserIds,
+      ...staffUserIds,
+    ];
+    if (allUserIds.length > 0) {
+      // QrScanLog is INSERT-ONLY — nullify the actor link rather than deleting
+      await tx.qrScanLog.updateMany({
+        where: { scannedById: { in: allUserIds } },
+        data:  { scannedById: null },
+      });
+      // Notifications cascade via onDelete: Cascade on User
+      await tx.user.deleteMany({ where: { id: { in: allUserIds } } });
+    }
+  }, { timeout: 30_000 });
+
+  // Audit log written after transaction (hospital row gone, so no hospitalId FK)
+  await writeAuditLog({
+    actorId:    actorUserId,
+    actorRole:  Role.SUPER_ADMIN,
+    action:     AuditAction.HOSPITAL_SUSPENDED,
+    severity:   AuditSeverity.CRITICAL,
+    targetId:   hospitalId,
+    targetType: 'Hospital',
+    metadata:   { method: 'HARD_DELETE', name: hospital!.name },
+  });
+
+  logger.info(`[Admin] Super admin hard-deleted hospital: ${hospitalId} — ${hospital!.name}`);
+  return { success: true, hospitalId, name: hospital!.name };
+}
+
+// ─── Super admin: list patients ───────────────────────────────────────────────
+
+export async function listPatients(query: {
+  search?: string;
+  page?:   number;
+  limit?:  number;
+}) {
+  const page  = query.page  ?? 1;
+  const limit = query.limit ?? 50;
+  const skip  = (page - 1) * limit;
+
+  const where: Prisma.PatientWhereInput = {};
+  if (query.search) {
+    where.OR = [
+      { firstName: { contains: query.search, mode: 'insensitive' } },
+      { lastName:  { contains: query.search, mode: 'insensitive' } },
+      { uhid:      { contains: query.search, mode: 'insensitive' } },
+      { user: { email: { contains: query.search, mode: 'insensitive' } } },
+    ];
+  }
+
+  const [patients, total] = await Promise.all([
+    prisma.patient.findMany({
+      where,
+      skip,
+      take:    limit,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id:          true,
+        uhid:        true,
+        firstName:   true,
+        lastName:    true,
+        gender:      true,
+        dateOfBirth: true,
+        createdAt:   true,
+        user: { select: { id: true, email: true, isActive: true, isEmailVerified: true } },
+        _count: { select: { medicalRecords: true, appointments: true } },
+      },
+    }),
+    prisma.patient.count({ where }),
+  ]);
+
+  return {
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+    patients: patients.map((p) => ({
+      userId:          p.user.id,
+      patientId:       p.id,
+      uhid:            p.uhid,
+      name:            `${p.firstName} ${p.lastName}`,
+      email:           p.user.email,
+      gender:          p.gender,
+      dateOfBirth:     p.dateOfBirth.toISOString(),
+      isActive:        p.user.isActive,
+      isEmailVerified: p.user.isEmailVerified,
+      createdAt:       p.createdAt.toISOString(),
+      recordCount:     p._count.medicalRecords,
+      appointmentCount: p._count.appointments,
+    })),
+  };
+}
+
+// ─── Super admin: delete patient (full hard delete) ───────────────────────────
+
+export async function deletePatient(actorUserId: string, patientUserId: string) {
+  const user = await prisma.user.findUnique({
+    where:  { id: patientUserId },
+    select: { role: true, email: true },
+  });
+  if (!user) httpError('User not found', 404);
+  if (user!.role !== 'PATIENT') httpError('User is not a patient', 400);
+
+  const patient = await prisma.patient.findUnique({ where: { userId: patientUserId } });
+  if (!patient) httpError('Patient profile not found', 404);
+
+  const patientId = patient!.id;
+
+  await prisma.$transaction(async (tx) => {
+    // QrScanLogs reference QrCode (patientId) — must be deleted before QrCodes
+    await tx.qrScanLog.deleteMany({ where: { patientId } });
+    await tx.qrCode.deleteMany({ where: { patientId } });
+    await tx.emergencyAccess.deleteMany({ where: { patientId } });
+    await tx.familyLink.deleteMany({
+      where: { OR: [{ patientId }, { linkedToPatientId: patientId }] },
+    });
+    await tx.consent.deleteMany({ where: { patientId } });
+    await tx.pharmaCheckLog.deleteMany({ where: { patientId } });
+
+    // DoctorReviews and appointment nullification before deleting appointments
+    await tx.doctorReview.deleteMany({ where: { patientId } });
+    await tx.clinicalNote.updateMany({
+      where: { patientId, appointmentId: { not: null } },
+      data:  { appointmentId: null },
+    });
+    await tx.prescription.updateMany({
+      where: { patientId, appointmentId: { not: null } },
+      data:  { appointmentId: null },
+    });
+    await tx.appointment.deleteMany({ where: { patientId } });
+
+    // PrescriptionItems → Prescriptions
+    const patientPrescriptions = await tx.prescription.findMany({
+      where:  { patientId },
+      select: { id: true },
+    });
+    if (patientPrescriptions.length > 0) {
+      await tx.prescriptionItem.deleteMany({
+        where: { prescriptionId: { in: patientPrescriptions.map((p) => p.id) } },
+      });
+    }
+    await tx.prescription.deleteMany({ where: { patientId } });
+    await tx.clinicalNote.deleteMany({ where: { patientId } });
+    await tx.aiReportSummary.deleteMany({ where: { patientId } });
+
+    // MedicalRecords: nullify ClaimDocument references first
+    const patientRecords = await tx.medicalRecord.findMany({
+      where:  { patientId },
+      select: { id: true },
+    });
+    if (patientRecords.length > 0) {
+      await tx.claimDocument.updateMany({
+        where: { originalRecordId: { in: patientRecords.map((r) => r.id) } },
+        data:  { originalRecordId: null },
+      });
+    }
+    await tx.medicalRecord.deleteMany({ where: { patientId } });
+
+    // InsuranceClaims + their documents
+    const claims = await tx.insuranceClaim.findMany({
+      where:  { patientId },
+      select: { id: true },
+    });
+    if (claims.length > 0) {
+      await tx.claimDocument.deleteMany({ where: { claimId: { in: claims.map((c) => c.id) } } });
+    }
+    await tx.insuranceClaim.deleteMany({ where: { patientId } });
+
+    // EmergencyContacts (onDelete: Cascade from Patient, but explicit for clarity)
+    await tx.emergencyContact.deleteMany({ where: { patientId } });
+    await tx.patient.delete({ where: { id: patientId } });
+
+    // Notifications cascade from User; delete User last
+    await tx.user.delete({ where: { id: patientUserId } });
+  }, { timeout: 30_000 });
+
+  await writeAuditLog({
+    actorId:    actorUserId,
+    actorRole:  Role.SUPER_ADMIN,
+    action:     AuditAction.RECORD_DELETED,
+    severity:   AuditSeverity.CRITICAL,
+    targetId:   patientUserId,
+    targetType: 'Patient',
+    metadata:   { method: 'HARD_DELETE', uhid: patient!.uhid, email: user!.email },
+  });
+
+  logger.info(`[Admin] Super admin hard-deleted patient: ${patientUserId} | UHID: ${patient!.uhid}`);
+  return { success: true, patientUserId, uhid: patient!.uhid };
+}
+
 // ─── Super admin: platform analytics ─────────────────────────────────────────
 
 export async function getPlatformAnalytics() {

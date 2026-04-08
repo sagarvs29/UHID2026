@@ -96,9 +96,18 @@ export const insuranceProviderActionSchema = z.object({
   }
 });
 
+// ─── Patient list (super admin) ───────────────────────────────────────────────
+
+export const listPatientsQuerySchema = z.object({
+  search: z.string().optional(),
+  page:   z.coerce.number().int().min(1).default(1),
+  limit:  z.coerce.number().int().min(1).max(100).default(50),
+});
+
 export type VerifyStaffInput                 = z.infer<typeof verifyStaffSchema>;
 export type DeactivateStaffInput             = z.infer<typeof deactivateStaffSchema>;
 export type AuditLogQuery                    = z.infer<typeof auditLogQuerySchema>;
 export type HospitalActionInput              = z.infer<typeof hospitalActionSchema>;
 export type CreateHospitalInput              = z.infer<typeof createHospitalSchema>;
 export type InsuranceProviderActionInput     = z.infer<typeof insuranceProviderActionSchema>;
+export type ListPatientsQuery                = z.infer<typeof listPatientsQuerySchema>;

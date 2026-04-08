@@ -46,6 +46,15 @@ router.post('/super/hospitals', superAdminOnly, ...adminCtrl.createHospital);
 // PATCH /admin/super/hospitals/:id/verify
 router.patch('/super/hospitals/:id/verify', superAdminOnly, ...adminCtrl.hospitalAction);
 
+// DELETE /admin/super/hospitals/:id  — hard-deletes hospital + all related data
+router.delete('/super/hospitals/:id', superAdminOnly, ...adminCtrl.deleteHospital);
+
+// GET /admin/super/patients
+router.get('/super/patients', superAdminOnly, ...adminCtrl.listPatients);
+
+// DELETE /admin/super/patients/:userId  — hard-deletes patient account + all data
+router.delete('/super/patients/:userId', superAdminOnly, ...adminCtrl.deletePatient);
+
 // GET  /admin/super/analytics
 router.get('/super/analytics', superAdminOnly, ...adminCtrl.getPlatformAnalytics);
 

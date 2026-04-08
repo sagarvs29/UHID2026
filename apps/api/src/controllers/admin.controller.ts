@@ -8,6 +8,7 @@ import {
   hospitalActionSchema,
   createHospitalSchema,
   insuranceProviderActionSchema,
+  listPatientsQuerySchema,
 } from '@/validators/admin.validator';
 import * as adminService from '@/services/admin.service';
 
@@ -142,6 +143,37 @@ export const approveInsuranceProvider = [
       const { userId } = req.params;
       const { action, notes } = req.body as { action: 'APPROVE' | 'REJECT'; notes?: string };
       const data = await adminService.approveInsuranceProvider(req.user!.userId, userId, action, notes);
+      res.json({ success: true, data });
+    } catch (e) { next(e); }
+  },
+];
+
+export const deleteHospital = [
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const data = await adminService.deleteHospital(req.user!.userId, id);
+      res.json({ success: true, data });
+    } catch (e) { next(e); }
+  },
+];
+
+export const listPatients = [
+  validate(listPatientsQuerySchema, 'query'),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const query = listPatientsQuerySchema.parse(req.query);
+      const data  = await adminService.listPatients(query);
+      res.json({ success: true, data });
+    } catch (e) { next(e); }
+  },
+];
+
+export const deletePatient = [
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { userId } = req.params;
+      const data = await adminService.deletePatient(req.user!.userId, userId);
       res.json({ success: true, data });
     } catch (e) { next(e); }
   },
