@@ -68,10 +68,13 @@ export function createApp(): Application {
   // ─── Health check ───────────────────────────────────────
   app.get('/health', (_req, res) => {
     res.status(200).json({
-      success: true,
-      service: 'uhid-api',
+      success:   true,
+      service:   'uhid-api',
       timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
+      uptime:    process.uptime(),
+      smtp:      process.env.SMTP_USER
+        ? `configured (${process.env.SMTP_USER})`
+        : 'NOT CONFIGURED',
     });
   });
 
