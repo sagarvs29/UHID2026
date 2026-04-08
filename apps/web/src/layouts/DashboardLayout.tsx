@@ -83,6 +83,7 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   SUPER_ADMIN: [
     { to: '/superadmin/dashboard',  icon: Home,       label: 'Dashboard' },
     { to: '/superadmin/hospitals',  icon: Hospital,   label: 'Hospitals' },
+    { to: '/superadmin/patients',   icon: Users,      label: 'Patients' },
     { to: '/superadmin/users',      icon: Globe,      label: 'All Users' },
     { to: '/superadmin/insurance',  icon: Landmark,   label: 'Insurance Providers' },
     { to: '/superadmin/audit',      icon: ScrollText, label: 'Audit Logs' },

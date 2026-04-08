@@ -8,6 +8,7 @@ import type {
   AuditLogsResponse,
   AuditLogFilters,
   HospitalRow,
+  PatientListResponse,
   VerifyStaffInput,
 } from '@/types/admin';
 
@@ -21,6 +22,7 @@ export const adminKeys = {
   auditLogs:          (f?: AuditLogFilters) => ['admin', 'audit-logs', f] as const,
   hospitals:          () => ['admin', 'super', 'hospitals'] as const,
   platformAnalytics:  () => ['admin', 'super', 'analytics'] as const,
+  patients:           (search?: string, page?: number) => ['admin', 'super', 'patients', search, page] as const,
 };
 
 // ─── GET /admin/pending-verifications ────────────────────────────────────────
@@ -187,6 +189,54 @@ export function useCreateHospital() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: adminKeys.hospitals() });
+    },
+  });
+}
+
+// ─── DELETE /admin/super/hospitals/:id ───────────────────────────────────────
+
+export function useDeleteHospital() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (hospitalId: string) => {
+      const res = await api.delete(`/admin/super/hospitals/${hospitalId}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: adminKeys.hospitals() });
+    },
+  });
+}
+
+// ─── GET /admin/super/patients ───────────────────────────────────────────────
+
+export function usePatientList(search?: string, page = 1, limit = 50) {
+  return useQuery({
+    queryKey: adminKeys.patients(search, page),
+    queryFn:  async () => {
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+      params.set('page',  String(page));
+      params.set('limit', String(limit));
+      const res = await api.get<{ success: true; data: PatientListResponse }>(
+        `/admin/super/patients?${params.toString()}`
+      );
+      return res.data.data;
+    },
+  });
+}
+
+// ─── DELETE /admin/super/patients/:userId ─────────────────────────────────────
+
+export function useDeletePatient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await api.delete(`/admin/super/patients/${userId}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'super', 'patients'] });
     },
   });
 }

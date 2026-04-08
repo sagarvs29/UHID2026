@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useHospitalList, useHospitalAction, useCreateHospital } from '@/hooks/useAdmin';
+import { useHospitalList, useHospitalAction, useCreateHospital, useDeleteHospital } from '@/hooks/useAdmin';
 import type { CreateHospitalInput } from '@/hooks/useAdmin';
 import {
   Hospital,
@@ -14,18 +14,22 @@ import {
   AlertTriangle,
   Plus,
   X,
+  Trash2,
 } from 'lucide-react';
 
 export default function HospitalsPage() {
   const { data: hospitals = [], isLoading } = useHospitalList();
   const hospitalAction = useHospitalAction();
   const createHospital = useCreateHospital();
+  const deleteHospital = useDeleteHospital();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'verified' | 'pending'>('all');
   const [actionModal, setActionModal] = useState<{
     hospital: typeof hospitals[0];
     action: 'VERIFY' | 'SUSPEND';
   } | null>(null);
+  const [deleteModal, setDeleteModal] = useState<typeof hospitals[0] | null>(null);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
   const [notes, setNotes] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState<CreateHospitalInput>({
@@ -34,6 +38,13 @@ export default function HospitalsPage() {
     adminFirstName: '', adminLastName: '', adminEmail: '', adminPhone: '',
   });
   const [createError, setCreateError] = useState('');
+
+  const handleDelete = () => {
+    if (!deleteModal) return;
+    deleteHospital.mutate(deleteModal.id, {
+      onSuccess: () => { setDeleteModal(null); setDeleteConfirmName(''); },
+    });
+  };
 
   const filtered = hospitals
     .filter((h) => {
@@ -344,6 +355,13 @@ export default function HospitalsPage() {
                             Suspend
                           </button>
                         )}
+                        <button
+                          onClick={() => { setDeleteModal(h); setDeleteConfirmName(''); }}
+                          className="px-2 py-1 text-xs font-medium rounded border border-red-300 text-red-600 hover:bg-red-50 transition-colors"
+                          title="Delete hospital permanently"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -390,6 +408,53 @@ export default function HospitalsPage() {
                 }`}
               >
                 {hospitalAction.isPending ? 'Processing…' : actionModal.action === 'VERIFY' ? 'Verify Hospital' : 'Suspend Hospital'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-card rounded-2xl border shadow-xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Delete Hospital</h2>
+                <p className="text-xs text-muted-foreground">{deleteModal.name}</p>
+              </div>
+            </div>
+            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 space-y-1">
+              <p className="font-semibold">This action is permanent and cannot be undone.</p>
+              <p>All doctors, staff, appointments, medical records, and audit logs for this hospital will be permanently erased from the database.</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground">
+                Type the hospital name to confirm: <span className="font-bold">{deleteModal.name}</span>
+              </label>
+              <input
+                value={deleteConfirmName}
+                onChange={(e) => setDeleteConfirmName(e.target.value)}
+                placeholder={deleteModal.name}
+                className="w-full mt-2 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+              />
+            </div>
+            <div className="flex gap-2 justify-end pt-2">
+              <button
+                onClick={() => { setDeleteModal(null); setDeleteConfirmName(''); }}
+                className="px-4 py-2 text-sm rounded-lg border hover:bg-muted/40 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleteHospital.isPending || deleteConfirmName !== deleteModal.name}
+                className="px-4 py-2 text-sm rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {deleteHospital.isPending ? 'Deleting…' : 'Delete Permanently'}
               </button>
             </div>
           </div>

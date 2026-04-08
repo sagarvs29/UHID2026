@@ -68,6 +68,7 @@ import SuperAdminUsersPage from '@/pages/superadmin/UsersPage';
 import SuperAdminInsurancePage from '@/pages/superadmin/InsuranceProvidersPage';
 import SuperAdminAnalyticsPage from '@/pages/superadmin/AnalyticsPage';
 import SuperAdminSettingsPage from '@/pages/superadmin/SettingsPage';
+import SuperAdminPatientsPage from '@/pages/superadmin/PatientsPage';
 import AdminDoctorsPage from '@/pages/admin/DoctorsPage';
 import AdminAnalyticsPage from '@/pages/admin/AnalyticsPage';
 import AdminHospitalProfilePage from '@/pages/admin/HospitalProfilePage';
@@ -232,6 +233,7 @@ export default function App() {
         >
           <Route path="dashboard"  element={<SuperAdminDashboardPage />} />
           <Route path="hospitals"  element={<SuperAdminHospitalsPage />} />
+          <Route path="patients"   element={<SuperAdminPatientsPage />} />
           <Route path="users"      element={<SuperAdminUsersPage />} />
           <Route path="insurance"  element={<SuperAdminInsurancePage />} />
           <Route path="audit"      element={<AdminAuditLogsPage />} />

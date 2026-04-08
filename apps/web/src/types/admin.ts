@@ -140,6 +140,31 @@ export interface HospitalRow {
   staffCount:         number;
 }
 
+// ─── Patients (super admin) ─────────────────────────────────────────────────
+
+export interface PatientRow {
+  userId:           string;
+  patientId:        string;
+  uhid:             string;
+  name:             string;
+  email:            string;
+  gender:           string;
+  dateOfBirth:      string;
+  isActive:         boolean;
+  isEmailVerified:  boolean;
+  createdAt:        string;
+  recordCount:      number;
+  appointmentCount: number;
+}
+
+export interface PatientListResponse {
+  total:      number;
+  page:       number;
+  limit:      number;
+  totalPages: number;
+  patients:   PatientRow[];
+}
+
 // ─── Verify staff input ───────────────────────────────────────────────────────
 
 export interface VerifyStaffInput {
