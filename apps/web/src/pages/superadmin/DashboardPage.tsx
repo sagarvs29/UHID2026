@@ -1,5 +1,5 @@
 import { useAuthStore } from '@/stores/auth.store';
-import { usePlatformAnalytics, useHospitalList, useHospitalAction } from '@/hooks/useAdmin';
+import { usePlatformAnalytics, useHospitalAction } from '@/hooks/useAdmin';
 import {
   Hospital,
   Globe,
@@ -17,31 +17,33 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+function SkeletonCard() {
+  return (
+    <div className="rounded-xl border bg-card px-4 py-4 animate-pulse">
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-4 h-4 rounded bg-muted/60" />
+        <div className="h-3 w-20 rounded bg-muted/60" />
+      </div>
+      <div className="h-7 w-16 rounded bg-muted/60 mb-1" />
+      <div className="h-2.5 w-24 rounded bg-muted/40" />
+    </div>
+  );
+}
+
 export default function SuperAdminDashboardPage() {
   const user     = useAuthStore((s) => s.user);
   const navigate = useNavigate();
 
   const { data: analytics, isLoading } = usePlatformAnalytics();
-  const { data: hospitals = [] }        = useHospitalList();
   const hospitalAction                  = useHospitalAction();
 
-  const pendingHospitals = hospitals.filter((h) => !h.isVerified);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64" data-testid="platform-loading">
-        <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-      </div>
-    );
-  }
-
   const platformStats = [
-    { label: 'Total Users',       value: analytics?.users.total.toLocaleString()    ?? '—', icon: Users,       desc: 'All roles combined' },
-    { label: 'Total Records',     value: analytics?.totalRecords.toLocaleString()   ?? '—', icon: ScrollText,  desc: 'Across all hospitals' },
-    { label: 'Active Consents',   value: analytics?.activeConsents.toLocaleString() ?? '—', icon: ShieldCheck, desc: 'Platform-wide' },
-    { label: 'Total Claims',      value: analytics?.claims.total.toLocaleString()   ?? '—', icon: Landmark,    desc: 'All insurance claims' },
-    { label: 'SOS This Month',    value: analytics?.sosEventsThisMonth.toLocaleString() ?? '—', icon: HeartPulse, desc: 'Emergency activations' },
-    { label: 'AI Reports (30d)',  value: analytics?.aiUsageThisMonth.toLocaleString()   ?? '—', icon: Brain,   desc: 'AI API calls used' },
+    { label: 'Total Users',       value: analytics?.users.total.toLocaleString()    ?? null, icon: Users,       desc: 'All roles combined' },
+    { label: 'Total Records',     value: analytics?.totalRecords.toLocaleString()   ?? null, icon: ScrollText,  desc: 'Across all hospitals' },
+    { label: 'Active Consents',   value: analytics?.activeConsents.toLocaleString() ?? null, icon: ShieldCheck, desc: 'Platform-wide' },
+    { label: 'Total Claims',      value: analytics?.claims.total.toLocaleString()   ?? null, icon: Landmark,    desc: 'All insurance claims' },
+    { label: 'SOS This Month',    value: analytics?.sosEventsThisMonth.toLocaleString() ?? null, icon: HeartPulse, desc: 'Emergency activations' },
+    { label: 'AI Reports (30d)',  value: analytics?.aiUsageThisMonth.toLocaleString()   ?? null, icon: Brain,   desc: 'AI API calls used' },
   ];
 
   return (
@@ -81,20 +83,31 @@ export default function SuperAdminDashboardPage() {
 
       {/* ── Platform KPIs ── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        {platformStats.map(({ label, value, icon: Icon, desc }) => (
-          <div key={label} className="rounded-xl border bg-card px-4 py-4" data-testid="platform-stat">
-            <div className="flex items-center gap-2 mb-1">
-              <Icon className="w-4 h-4 text-primary" />
-              <span className="text-xs text-muted-foreground">{label}</span>
-            </div>
-            <p className="text-2xl font-bold text-foreground">{value}</p>
-            <p className="text-[11px] text-muted-foreground/70 mt-0.5">{desc}</p>
-          </div>
-        ))}
+        {isLoading
+          ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
+          : platformStats.map(({ label, value, icon: Icon, desc }) => (
+              <div key={label} className="rounded-xl border bg-card px-4 py-4" data-testid="platform-stat">
+                <div className="flex items-center gap-2 mb-1">
+                  <Icon className="w-4 h-4 text-primary" />
+                  <span className="text-xs text-muted-foreground">{label}</span>
+                </div>
+                <p className="text-2xl font-bold text-foreground">{value ?? '—'}</p>
+                <p className="text-[11px] text-muted-foreground/70 mt-0.5">{desc}</p>
+              </div>
+            ))}
       </div>
 
       {/* ── Users by role ── */}
-      {analytics?.users.byRole && (
+      {isLoading ? (
+        <div className="rounded-xl border bg-card p-4 animate-pulse">
+          <div className="h-4 w-32 rounded bg-muted/60 mb-3" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-8 rounded-lg bg-muted/40" />
+            ))}
+          </div>
+        </div>
+      ) : analytics?.users.byRole && (
         <div className="rounded-xl border bg-card p-4">
           <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <Activity className="w-4 h-4 text-primary" />
@@ -117,9 +130,9 @@ export default function SuperAdminDashboardPage() {
           <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <Hospital className="w-4 h-4 text-primary" />
             Hospitals
-            {pendingHospitals.length > 0 && (
+            {!isLoading && (analytics?.pendingHospitals ?? 0) > 0 && (
               <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-bold ml-1">
-                {pendingHospitals.length}
+                {analytics!.pendingHospitals}
               </span>
             )}
           </h2>
@@ -142,49 +155,59 @@ export default function SuperAdminDashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {hospitals.slice(0, 10).map((hosp) => (
-                <tr
-                  key={hosp.id}
-                  data-testid="hospital-row"
-                  className="border-b last:border-0 hover:bg-muted/20 transition-colors"
-                >
-                  <td className="px-4 py-2.5 font-medium">{hosp.name}</td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{hosp.city}, {hosp.state}</td>
-                  <td className="px-4 py-2.5">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                      hosp.isVerified
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-amber-100 text-amber-700'
-                    }`}>
-                      {hosp.isVerified ? 'Verified' : 'Pending'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{hosp.doctorCount}</td>
-                  <td className="px-4 py-2.5">
-                    <div className="flex gap-1.5 justify-end">
-                      {!hosp.isVerified ? (
-                        <button
-                          data-testid="verify-hospital-btn"
-                          onClick={() => hospitalAction.mutate({ hospitalId: hosp.id, action: 'VERIFY' })}
-                          disabled={hospitalAction.isPending}
-                          className="px-2 py-1 text-[10px] font-medium rounded bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
-                        >
-                          Verify
-                        </button>
-                      ) : (
-                        <button
-                          data-testid="suspend-hospital-btn"
-                          onClick={() => hospitalAction.mutate({ hospitalId: hosp.id, action: 'SUSPEND' })}
-                          disabled={hospitalAction.isPending}
-                          className="px-2 py-1 text-[10px] font-medium rounded border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
-                        >
-                          Suspend
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {isLoading
+                ? Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i} className="border-b last:border-0 animate-pulse">
+                      <td className="px-4 py-2.5"><div className="h-3 w-32 rounded bg-muted/60" /></td>
+                      <td className="px-4 py-2.5"><div className="h-3 w-24 rounded bg-muted/40" /></td>
+                      <td className="px-4 py-2.5"><div className="h-5 w-16 rounded-full bg-muted/40" /></td>
+                      <td className="px-4 py-2.5"><div className="h-3 w-8 rounded bg-muted/40" /></td>
+                      <td className="px-4 py-2.5" />
+                    </tr>
+                  ))
+                : (analytics?.recentHospitals ?? []).map((hosp) => (
+                    <tr
+                      key={hosp.id}
+                      data-testid="hospital-row"
+                      className="border-b last:border-0 hover:bg-muted/20 transition-colors"
+                    >
+                      <td className="px-4 py-2.5 font-medium">{hosp.name}</td>
+                      <td className="px-4 py-2.5 text-muted-foreground">{hosp.city}, {hosp.state}</td>
+                      <td className="px-4 py-2.5">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          hosp.isVerified
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {hosp.isVerified ? 'Verified' : 'Pending'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-muted-foreground">{hosp.doctorCount}</td>
+                      <td className="px-4 py-2.5">
+                        <div className="flex gap-1.5 justify-end">
+                          {!hosp.isVerified ? (
+                            <button
+                              data-testid="verify-hospital-btn"
+                              onClick={() => hospitalAction.mutate({ hospitalId: hosp.id, action: 'VERIFY' })}
+                              disabled={hospitalAction.isPending}
+                              className="px-2 py-1 text-[10px] font-medium rounded bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+                            >
+                              Verify
+                            </button>
+                          ) : (
+                            <button
+                              data-testid="suspend-hospital-btn"
+                              onClick={() => hospitalAction.mutate({ hospitalId: hosp.id, action: 'SUSPEND' })}
+                              disabled={hospitalAction.isPending}
+                              className="px-2 py-1 text-[10px] font-medium rounded border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                            >
+                              Suspend
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
             </tbody>
           </table>
         </div>
@@ -222,3 +245,4 @@ export default function SuperAdminDashboardPage() {
     </div>
   );
 }
+

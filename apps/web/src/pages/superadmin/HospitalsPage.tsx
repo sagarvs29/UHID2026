@@ -181,14 +181,6 @@ export default function HospitalsPage() {
     });
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -213,18 +205,29 @@ export default function HospitalsPage() {
 
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-xl border bg-card px-4 py-3">
-          <p className="text-xs text-muted-foreground">Total Hospitals</p>
-          <p className="text-2xl font-bold text-foreground">{hospitals.length}</p>
-        </div>
-        <div className="rounded-xl border bg-card px-4 py-3">
-          <p className="text-xs text-muted-foreground">Verified</p>
-          <p className="text-2xl font-bold text-green-600">{verifiedCount}</p>
-        </div>
-        <div className="rounded-xl border bg-card px-4 py-3">
-          <p className="text-xs text-muted-foreground">Pending Verification</p>
-          <p className="text-2xl font-bold text-amber-600">{pendingCount}</p>
-        </div>
+        {isLoading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="rounded-xl border bg-card px-4 py-3 animate-pulse">
+              <div className="h-3 w-28 rounded bg-muted/60 mb-2" />
+              <div className="h-7 w-12 rounded bg-muted/60" />
+            </div>
+          ))
+        ) : (
+          <>
+            <div className="rounded-xl border bg-card px-4 py-3">
+              <p className="text-xs text-muted-foreground">Total Hospitals</p>
+              <p className="text-2xl font-bold text-foreground">{hospitals.length}</p>
+            </div>
+            <div className="rounded-xl border bg-card px-4 py-3">
+              <p className="text-xs text-muted-foreground">Verified</p>
+              <p className="text-2xl font-bold text-green-600">{verifiedCount}</p>
+            </div>
+            <div className="rounded-xl border bg-card px-4 py-3">
+              <p className="text-xs text-muted-foreground">Pending Verification</p>
+              <p className="text-2xl font-bold text-amber-600">{pendingCount}</p>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Success / email-status banner */}
@@ -318,7 +321,20 @@ export default function HospitalsPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {isLoading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <tr key={i} className="border-b last:border-0 animate-pulse">
+                    <td className="px-4 py-3"><div className="h-3 w-36 rounded bg-muted/60 mb-1.5" /><div className="h-2.5 w-24 rounded bg-muted/40" /></td>
+                    <td className="px-4 py-3"><div className="h-3 w-28 rounded bg-muted/40" /></td>
+                    <td className="px-4 py-3"><div className="h-3 w-24 rounded bg-muted/40" /></td>
+                    <td className="px-4 py-3 text-center"><div className="h-3 w-6 rounded bg-muted/40 mx-auto" /></td>
+                    <td className="px-4 py-3 text-center"><div className="h-3 w-6 rounded bg-muted/40 mx-auto" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-16 rounded-full bg-muted/40" /></td>
+                    <td className="px-4 py-3"><div className="h-3 w-20 rounded bg-muted/40" /></td>
+                    <td className="px-4 py-3" />
+                  </tr>
+                ))
+              ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
                     No hospitals found

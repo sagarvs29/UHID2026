@@ -107,6 +107,18 @@ export interface HospitalAnalytics {
   };
 }
 
+export interface AnalyticsHospitalRow {
+  id:          string;
+  name:        string;
+  city:        string;
+  state:       string;
+  isVerified:  boolean;
+  createdAt:   string;
+  adminEmail:  string | null;
+  doctorCount: number;
+  staffCount:  number;
+}
+
 export interface PlatformAnalytics {
   users: {
     total:  number;
@@ -120,6 +132,8 @@ export interface PlatformAnalytics {
   };
   sosEventsThisMonth:  number;
   aiUsageThisMonth:    number;
+  pendingHospitals:    number;
+  recentHospitals:     AnalyticsHospitalRow[];
 }
 
 // ─── Hospitals (super admin) ─────────────────────────────────────────────────

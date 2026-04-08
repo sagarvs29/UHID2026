@@ -544,6 +544,8 @@ export const mockPlatformAnalytics: PlatformAnalytics = {
   },
   sosEventsThisMonth:    12,
   aiUsageThisMonth:      9800,
+  pendingHospitals:      3,
+  recentHospitals:       [],
 };
 
 // ─── Phase 9: Telehealth fixtures ────────────────────────────────────────────

@@ -1075,6 +1075,8 @@ export async function getPlatformAnalytics() {
     claimsBreakdown,
     sosEvents,
     aiUsage,
+    pendingHospitalsCount,
+    recentHospitals,
   ] = await Promise.all([
     prisma.user.groupBy({
       by:     ['role'],
@@ -1100,6 +1102,23 @@ export async function getPlatformAnalytics() {
         createdAt: { gte: start },
       },
     }),
+
+    prisma.hospital.count({ where: { isVerified: false } }),
+
+    prisma.hospital.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: {
+        id:         true,
+        name:       true,
+        city:       true,
+        state:      true,
+        isVerified: true,
+        createdAt:  true,
+        admin: { select: { firstName: true, lastName: true, user: { select: { email: true } } } },
+        _count: { select: { doctors: true, staff: true } },
+      },
+    }),
   ]);
 
   const byRole: Record<string, number> = {};
@@ -1109,11 +1128,23 @@ export async function getPlatformAnalytics() {
   for (const c of claimsBreakdown) claimsByStatus[c.status] = c._count.id;
 
   return {
-    users:         { total: Object.values(byRole).reduce((a, b) => a + b, 0), byRole },
+    users:               { total: Object.values(byRole).reduce((a, b) => a + b, 0), byRole },
     totalRecords,
     activeConsents,
-    claims:        { total: Object.values(claimsByStatus).reduce((a, b) => a + b, 0), byStatus: claimsByStatus },
-    sosEventsThisMonth: sosEvents,
-    aiUsageThisMonth:   aiUsage,
+    claims:              { total: Object.values(claimsByStatus).reduce((a, b) => a + b, 0), byStatus: claimsByStatus },
+    sosEventsThisMonth:  sosEvents,
+    aiUsageThisMonth:    aiUsage,
+    pendingHospitals:    pendingHospitalsCount,
+    recentHospitals:     recentHospitals.map((h) => ({
+      id:          h.id,
+      name:        h.name,
+      city:        h.city,
+      state:       h.state,
+      isVerified:  h.isVerified,
+      createdAt:   h.createdAt.toISOString(),
+      adminEmail:  h.admin?.user.email ?? null,
+      doctorCount: h._count.doctors,
+      staffCount:  h._count.staff,
+    })),
   };
 }
