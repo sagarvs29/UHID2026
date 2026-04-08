@@ -43,14 +43,6 @@ export function createApp(): Application {
     message: { success: false, error: 'Too many requests, please try again later' },
   });
 
-  const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 20,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { success: false, error: 'Too many auth attempts, try again in 15 minutes' },
-  });
-
   app.use(globalLimiter);
 
   // ─── Body parsing ───────────────────────────────────────
@@ -81,7 +73,7 @@ export function createApp(): Application {
   });
 
   // ─── Routes ─────────────────────────────────────────────
-  app.use('/api/v1/auth', authLimiter, authRouter);
+  app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/hospitals', hospitalsRouter); // Public — registration dropdown
   app.use('/api/v1/records', recordsRouter);     // Phase 2 — medical records
   app.use('/api/v1/consents', consentRouter);    // Phase 3 — consent management
