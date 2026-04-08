@@ -634,15 +634,22 @@ export async function createHospital(
     },
   });
 
-  // Send credentials email (fire-and-forget, don't fail the request)
-  sendHospitalAdminCredentialsEmail(
-    data.adminEmail,
-    `${data.adminFirstName} ${data.adminLastName}`,
-    data.name,
-    tempPassword,
-  ).catch((e) => logger.error('[Email] Failed to send admin credentials email', e));
-
   logger.info(`[Admin] Super admin created hospital: ${result.hospital.id} — ${data.name} | Admin: ${data.adminEmail}`);
+
+  // Send credentials email — awaited so we can log success/failure clearly
+  let emailSent = false;
+  try {
+    await sendHospitalAdminCredentialsEmail(
+      data.adminEmail,
+      `${data.adminFirstName} ${data.adminLastName}`,
+      data.name,
+      tempPassword,
+    );
+    emailSent = true;
+    logger.info(`[Email] Hospital admin credentials sent to: ${data.adminEmail}`);
+  } catch (e) {
+    logger.error('[Email] Failed to send hospital admin credentials email', { to: data.adminEmail, error: (e as Error).message });
+  }
 
   return {
     id:                 result.hospital.id,
@@ -653,6 +660,7 @@ export async function createHospital(
     isVerified:         result.hospital.isVerified,
     adminEmail:         data.adminEmail,
     adminName:          `${data.adminFirstName} ${data.adminLastName}`,
+    credentialsEmailSent: emailSent,
   };
 }
 

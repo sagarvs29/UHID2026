@@ -38,6 +38,7 @@ export default function HospitalsPage() {
     adminFirstName: '', adminLastName: '', adminEmail: '', adminPhone: '',
   });
   const [createError, setCreateError] = useState('');
+  const [successBanner, setSuccessBanner] = useState<{ hospitalName: string; adminEmail: string; emailSent: boolean } | null>(null);
 
   const handleDelete = () => {
     if (!deleteModal) return;
@@ -160,10 +161,18 @@ export default function HospitalsPage() {
     }
 
     createHospital.mutate(createForm, {
-      onSuccess: () => {
+      onSuccess: (res) => {
+        const data = (res as { data?: { name?: string; adminEmail?: string; credentialsEmailSent?: boolean } })?.data;
         setShowCreateModal(false);
         setCreateForm({ name: '', registrationNumber: '', address: '', city: '', state: '', pincode: '', phone: '', email: '', isNABH: false, specialties: [], adminFirstName: '', adminLastName: '', adminEmail: '', adminPhone: '' });
         setCreateError('');
+        setSuccessBanner({
+          hospitalName: data?.name ?? createForm.name,
+          adminEmail:   data?.adminEmail ?? createForm.adminEmail,
+          emailSent:    data?.credentialsEmailSent ?? true,
+        });
+        // Auto-dismiss after 20 seconds
+        setTimeout(() => setSuccessBanner(null), 20_000);
       },
       onError: (err) => {
         const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Failed to create hospital';
@@ -217,6 +226,36 @@ export default function HospitalsPage() {
           <p className="text-2xl font-bold text-amber-600">{pendingCount}</p>
         </div>
       </div>
+
+      {/* Success / email-status banner */}
+      {successBanner && (
+        <div className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${
+          successBanner.emailSent
+            ? 'border-green-200 bg-green-50'
+            : 'border-amber-200 bg-amber-50'
+        }`}>
+          {successBanner.emailSent ? (
+            <BadgeCheck className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+          ) : (
+            <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+          )}
+          <div className="flex-1">
+            <p className={`text-sm font-semibold ${successBanner.emailSent ? 'text-green-800' : 'text-amber-800'}`}>
+              {successBanner.emailSent
+                ? `Hospital "${successBanner.hospitalName}" created successfully!`
+                : `Hospital "${successBanner.hospitalName}" created — but credentials email failed to send`}
+            </p>
+            <p className={`text-xs mt-0.5 ${successBanner.emailSent ? 'text-green-600' : 'text-amber-600'}`}>
+              {successBanner.emailSent
+                ? `Login credentials have been emailed to ${successBanner.adminEmail}`
+                : `The credentials could not be sent to ${successBanner.adminEmail}. The hospital admin will need their password reset manually.`}
+            </p>
+          </div>
+          <button onClick={() => setSuccessBanner(null)} className="p-1 rounded hover:bg-black/5 transition-colors">
+            <X className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
+      )}
 
       {/* Pending alert */}
       {pendingCount > 0 && (
