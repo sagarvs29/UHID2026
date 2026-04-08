@@ -28,10 +28,6 @@ function getTransporter(): Transporter {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-      // Aggressive timeouts so a blocked/slow SMTP port doesn't hang the response
-      connectionTimeout: 10000,  // 10 s to establish TCP connection
-      greetingTimeout:   8000,   // 8 s for server greeting
-      socketTimeout:     15000,  // 15 s for socket inactivity
     });
   }
   return _transporter;
@@ -42,11 +38,10 @@ function getTransporter(): Transporter {
  * otherwise falls back to Gmail SMTP.
  */
 async function sendEmail(opts: { to: string; subject: string; html: string }): Promise<void> {
-  const from = process.env.SMTP_USER
-    ? `"UHID Health" <${process.env.SMTP_USER}>`
-    : 'UHID Health <onboarding@resend.dev>';
-
   if (process.env.RESEND_API_KEY) {
+    // Resend: from must be a verified Resend domain, not a gmail address.
+    // Set RESEND_FROM in Railway env to use a custom domain; falls back to Resend's shared sender.
+    const from = process.env.RESEND_FROM ?? 'UHID Health <onboarding@resend.dev>';
     const { error } = await getResend().emails.send({
       from,
       to:      opts.to,
@@ -55,6 +50,10 @@ async function sendEmail(opts: { to: string; subject: string; html: string }): P
     });
     if (error) throw new Error(error.message);
   } else {
+    // Local / SMTP fallback (Gmail works locally, but is blocked on Railway)
+    const from = process.env.SMTP_USER
+      ? `"UHID Health" <${process.env.SMTP_USER}>`
+      : 'UHID Health <noreply@uhid.health>';
     await getTransporter().sendMail({
       from,
       to:      opts.to,
