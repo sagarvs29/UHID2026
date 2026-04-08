@@ -2,6 +2,7 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 
 import { errorHandler, notFound } from '@/middlewares/error.middleware';
@@ -23,6 +24,9 @@ export function createApp(): Application {
 
   // ─── Trust Railway's reverse proxy ──────────────────────
   app.set('trust proxy', 1);
+  // ─── Compression (gzip all responses) ───────────────────
+  app.use(compression());
+
   // ─── Security ───────────────────────────────────────────
   app.use(helmet());
   app.use(
@@ -51,7 +55,7 @@ export function createApp(): Application {
 
   // ─── HTTP logging ───────────────────────────────────────
   app.use(
-    morgan('combined', {
+    morgan(process.env.NODE_ENV === 'production' ? 'tiny' : 'combined', {
       stream: { write: (msg) => logger.http(msg.trim()) },
       skip: (req) => req.path === '/health',
     })
@@ -99,11 +103,20 @@ export function createApp(): Application {
   if (process.env.NODE_ENV === 'production') {
     const path = require('path');
     const frontendDist = path.resolve(__dirname, '../../web/dist');
-    app.use(express.static(frontendDist));
+
+    // Vite builds assets with content hashes — cache them for 1 year
+    app.use('/assets', express.static(path.join(frontendDist, 'assets'), {
+      maxAge: '1y',
+      immutable: true,
+    }));
+
+    // index.html — never cache (so new deploys are picked up immediately)
+    app.use(express.static(frontendDist, { maxAge: 0 }));
 
     // SPA fallback — any non-API route serves index.html
     app.get('*', (req, res, next) => {
       if (req.path.startsWith('/api/')) return next();
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.sendFile(path.join(frontendDist, 'index.html'));
     });
   }
