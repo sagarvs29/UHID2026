@@ -36,8 +36,10 @@ const envSchema = z.object({
   // ─── Email ─────────────────────────────────────────────────────
   SMTP_HOST: z.string().default('smtp.gmail.com'),
   SMTP_PORT: z.string().default('587'),
-  SMTP_USER: z.string().email('SMTP_USER must be a valid email'),
-  SMTP_PASS: z.string().min(1, 'SMTP_PASS is required'),
+  SMTP_USER: z.string().email('SMTP_USER must be a valid email').optional(),
+  SMTP_PASS: z.string().optional(),
+  // ─── Resend (optional — preferred over SMTP on Railway) ────────
+  RESEND_API_KEY: z.string().optional(),
 
   // ─── AI Service ────────────────────────────────────────────────
   AI_SERVICE_URL:          z.string().url().default('http://localhost:8001'),

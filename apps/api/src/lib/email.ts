@@ -1,11 +1,20 @@
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
+import { Resend } from 'resend';
 
 /**
- * Lazy transporter — built on first use so process.env is read AFTER
- * dotenv.config() runs in index.ts. In CommonJS (tsc output) all imports
- * are hoisted and executed before any module-level code, so an eagerly
- * created transporter would have undefined SMTP_USER / SMTP_PASS.
+ * Lazy Resend client — used when RESEND_API_KEY is set in env.
+ * Resend uses HTTP (not SMTP) so it always works on Railway.
+ */
+let _resend: Resend | null = null;
+function getResend(): Resend {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY!);
+  return _resend;
+}
+
+/**
+ * Lazy nodemailer transporter — fallback when RESEND_API_KEY is NOT set.
+ * Built on first use so process.env is read AFTER dotenv.config() runs.
  */
 let _transporter: Transporter | null = null;
 
@@ -19,7 +28,7 @@ function getTransporter(): Transporter {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-      // Aggressive timeouts so a blocked/slow SMTP port doesn't hang the HTTP response
+      // Aggressive timeouts so a blocked/slow SMTP port doesn't hang the response
       connectionTimeout: 10000,  // 10 s to establish TCP connection
       greetingTimeout:   8000,   // 8 s for server greeting
       socketTimeout:     15000,  // 15 s for socket inactivity
@@ -29,9 +38,41 @@ function getTransporter(): Transporter {
 }
 
 /**
+ * Unified send function — uses Resend (HTTP) when RESEND_API_KEY is set,
+ * otherwise falls back to Gmail SMTP.
+ */
+async function sendEmail(opts: { to: string; subject: string; html: string }): Promise<void> {
+  const from = process.env.SMTP_USER
+    ? `"UHID Health" <${process.env.SMTP_USER}>`
+    : 'UHID Health <onboarding@resend.dev>';
+
+  if (process.env.RESEND_API_KEY) {
+    const { error } = await getResend().emails.send({
+      from,
+      to:      opts.to,
+      subject: opts.subject,
+      html:    opts.html,
+    });
+    if (error) throw new Error(error.message);
+  } else {
+    await getTransporter().sendMail({
+      from,
+      to:      opts.to,
+      subject: opts.subject,
+      html:    opts.html,
+    });
+  }
+}
+
+/**
  * Call once at startup (after dotenv.config) to verify SMTP credentials.
+ * Skipped when RESEND_API_KEY is set (Resend needs no local verification).
  */
 export function verifySmtp(): void {
+  if (process.env.RESEND_API_KEY) {
+    console.log('[Email] Using Resend (HTTP) — SMTP verification skipped');
+    return;
+  }
   getTransporter().verify((err) => {
     if (err) {
       console.error('[Email] SMTP connection failed:', err.message);
@@ -41,15 +82,13 @@ export function verifySmtp(): void {
   });
 }
 
-// ─── Email Templates ──────────────────────────────────────
 export async function sendPasswordResetEmail(
   to: string,
   userName: string,
   resetToken: string
 ): Promise<void> {
   const resetUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5175'}/reset-password?token=${resetToken}`;
-  await getTransporter().sendMail({
-    from: `"UHID Health" <${process.env.SMTP_USER}>`,
+  await sendEmail({
     to,
     subject: 'Reset your UHID password',
     html: `
@@ -77,8 +116,7 @@ export async function sendEmailVerificationEmail(
   token: string
 ): Promise<void> {
   const verifyUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5175'}/verify-email?token=${token}`;
-  await getTransporter().sendMail({
-    from: `"UHID Health" <${process.env.SMTP_USER}>`,
+  await sendEmail({
     to,
     subject: 'Verify your UHID email address',
     html: `
@@ -106,8 +144,7 @@ export async function sendWelcomePatientEmail(
   userName: string,
   uhid: string
 ): Promise<void> {
-  await getTransporter().sendMail({
-    from: `"UHID Health" <${process.env.SMTP_USER}>`,
+  await sendEmail({
     to,
     subject: 'Welcome to UHID — Your Universal Health ID',
     html: `
@@ -144,8 +181,7 @@ export async function sendApprovalPendingEmail(
   const approverLabel =
     role === 'INSURANCE_PROVIDER' ? 'UHID Super Admin' : `Hospital Admin at ${approverName}`;
 
-  await getTransporter().sendMail({
-    from: `"UHID Health" <${process.env.SMTP_USER}>`,
+  await sendEmail({
     to,
     subject: `UHID — Your ${roleLabel} account is under review`,
     html: `
@@ -179,8 +215,7 @@ export async function sendHospitalAdminCredentialsEmail(
   tempPassword: string,
 ): Promise<void> {
   const loginUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5175'}/login`;
-  await getTransporter().sendMail({
-    from: `"UHID Health" <${process.env.SMTP_USER}>`,
+  await sendEmail({
     to,
     subject: `UHID — You are the Admin of ${hospitalName}`,
     html: `
@@ -230,8 +265,7 @@ export async function sendConsentOtpEmail(
   scope: string[]
 ): Promise<void> {
   const scopeList = scope.map((s) => `<li>${s.replace(/_/g, ' ')}</li>`).join('');
-  await getTransporter().sendMail({
-    from: `"UHID Health" <${process.env.SMTP_USER}>`,
+  await sendEmail({
     to,
     subject: `Approve Record Access — ${requesterName} is requesting your data`,
     html: `
@@ -287,8 +321,7 @@ export async function sendConsentStatusEmail(
   };
 
   const cfg = statusConfig[status];
-  await getTransporter().sendMail({
-    from: `"UHID Health" <${process.env.SMTP_USER}>`,
+  await sendEmail({
     to,
     subject: cfg.subject,
     html: `
@@ -343,8 +376,7 @@ export async function sendHospitalActionEmail(
   };
 
   const c = cfg[action];
-  await getTransporter().sendMail({
-    from: `"UHID Health" <${process.env.SMTP_USER}>`,
+  await sendEmail({
     to,
     subject: c.subject,
     html: `
@@ -397,8 +429,7 @@ export async function sendInsuranceProviderApprovalEmail(
           : `<p style="color: #6B7280; font-size: 14px;">If you believe this was a mistake, please contact UHID support at <strong>support@uhid.health</strong>.</p>`,
       };
 
-  await getTransporter().sendMail({
-    from: `"UHID Health" <${process.env.SMTP_USER}>`,
+  await sendEmail({
     to,
     subject: cfg.subject,
     html: `
@@ -466,8 +497,7 @@ export async function sendStaffVerificationResultEmail(
   };
 
   const c = cfgMap[action];
-  await getTransporter().sendMail({
-    from: `"UHID Health" <${process.env.SMTP_USER}>`,
+  await sendEmail({
     to,
     subject: c.subject,
     html: `

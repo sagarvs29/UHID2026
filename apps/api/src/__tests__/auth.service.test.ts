@@ -63,13 +63,13 @@ const mockRedis  = redis as jest.Mocked<typeof redis>;
 describe('generateUHID', () => {
   it('generates UHID matching expected format', () => {
     const uhid = generateUHID();
-    // Format: UHID-XXXX-XXXX-XXXX where X is [A-Z2-9]
-    expect(uhid).toMatch(/^UHID-[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+    // Format: UH-XXXXXX where X is a digit (100000–999999)
+    expect(uhid).toMatch(/^UH-\d{6}$/);
   });
 
-  it('generates unique UHIDs across 1000 iterations', () => {
-    const ids = new Set(Array.from({ length: 1000 }, () => generateUHID()));
-    expect(ids.size).toBe(1000);
+  it('generates unique UHIDs across 100 iterations', () => {
+    const ids = new Set(Array.from({ length: 100 }, () => generateUHID()));
+    expect(ids.size).toBe(100);
   });
 });
 

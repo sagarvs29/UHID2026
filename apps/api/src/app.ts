@@ -72,9 +72,11 @@ export function createApp(): Application {
       service:   'uhid-api',
       timestamp: new Date().toISOString(),
       uptime:    process.uptime(),
-      smtp:      process.env.SMTP_USER
-        ? `configured (${process.env.SMTP_USER})`
-        : 'NOT CONFIGURED',
+      email: process.env.RESEND_API_KEY
+        ? `resend (${process.env.SMTP_USER ?? 'onboarding@resend.dev'})`
+        : process.env.SMTP_USER
+          ? `smtp (${process.env.SMTP_USER})`
+          : 'NOT CONFIGURED',
     });
   });
 
