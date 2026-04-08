@@ -19,6 +19,10 @@ function getTransporter(): Transporter {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      // Aggressive timeouts so a blocked/slow SMTP port doesn't hang the HTTP response
+      connectionTimeout: 10000,  // 10 s to establish TCP connection
+      greetingTimeout:   8000,   // 8 s for server greeting
+      socketTimeout:     15000,  // 15 s for socket inactivity
     });
   }
   return _transporter;
